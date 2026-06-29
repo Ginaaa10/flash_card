@@ -70,6 +70,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
         _titleController.text = next.title;
         _frontRecognizedText = next.frontRecognizedText;
         _backRecognizedText = next.backRecognizedText;
+        _isFavorite = next.isFavorite;
+        _groupName = next.groupName;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _frontCanvasKey.currentState?.loadStrokes(next.frontStrokes);
@@ -113,6 +115,75 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
         _backRecognizedText = null;
       }
     });
+  }
+
+  void _toggleFavorite() {
+    setState(() => _isFavorite = !_isFavorite);
+  }
+
+  void _showGroupDialog() {
+    final existingGroups = ref.read(allGroupsProvider);
+    final groupController = TextEditingController(text: _groupName ?? '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Flashcard Group'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: groupController,
+              decoration: const InputDecoration(
+                hintText: 'Enter group name',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (existingGroups.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Text('Existing groups:',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: existingGroups.map((group) {
+                  return ActionChip(
+                    label: Text(group),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      setState(() => _groupName = group);
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          if (_groupName != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() => _groupName = null);
+              },
+              child: const Text('Remove', style: TextStyle(color: Colors.red)),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = groupController.text.trim();
+              Navigator.pop(context);
+              setState(() => _groupName = name.isEmpty ? null : name);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _recognizeText() async {
@@ -202,6 +273,22 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                 ),
               ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _isFavorite ? Icons.star : Icons.star_border,
+              color: _isFavorite ? Colors.amber : Colors.grey,
+            ),
+            onPressed: _toggleFavorite,
+          ),
+          IconButton(
+            icon: Icon(
+              Icons.folder,
+              color: _groupName != null ? Theme.of(context).colorScheme.primary : Colors.grey,
+            ),
+            onPressed: _showGroupDialog,
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -621,6 +708,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               backStrokes: backStrokes,
               frontRecognizedText: _frontRecognizedText,
               backRecognizedText: _backRecognizedText,
+              isFavorite: _isFavorite,
+              groupName: _groupName,
             ),
           );
         } else {
