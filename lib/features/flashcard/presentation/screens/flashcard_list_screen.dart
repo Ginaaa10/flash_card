@@ -19,11 +19,12 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
   String _selectedFilter = 'all';
+  String? _selectedGroup;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -51,6 +52,7 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
                 tabs: const [
                   Tab(icon: Icon(Icons.all_inclusive), text: 'All'),
                   Tab(icon: Icon(Icons.star), text: 'Favorites'),
+                  Tab(icon: Icon(Icons.folder), text: 'Groups'),
                   Tab(icon: Icon(Icons.schedule), text: 'Recent'),
                 ],
               ),
@@ -62,9 +64,10 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
               children: [
                 _buildFlashcardList(flashcards, theme),
                 _buildFlashcardList(
-                  flashcards.where((fc) => fc.reviewCount > 0).toList(),
+                  ref.watch(favoriteFlashcardProvider),
                   theme,
                 ),
+                _buildGroupsTab(theme),
                 _buildFlashcardList(
                   flashcards
                       .where((fc) =>
@@ -439,6 +442,28 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (flashcard.isFavorite)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.star, size: 16, color: Colors.amber),
+                      ),
+                    if (flashcard.groupName != null && flashcard.groupName!.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          flashcard.groupName!,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     if (flashcard.reviewCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -547,6 +572,54 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
     } else {
       return 'Just now';
     }
+  }
+
+  Widget _buildGroupsTab(ThemeData theme) {
+    final groups = ref.watch(allGroupsProvider);
+    final flashcards = ref.watch(filteredFlashcardProvider);
+
+    if (groups.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.folder_off, size: 64, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text(
+              'No groups yet',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                color: Colors.grey,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Assign groups to flashcards in the editor',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: groups.length,
+      itemBuilder: (context, index) {
+        final group = groups[index];
+        final groupFlashcards = flashcards.where((fc) => fc.groupName == group).toList();
+        return ExpansionTile(
+          leading: Icon(Icons.folder, color: theme.colorScheme.primary),
+          title: Text(
+            group,
+            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          subtitle: Text('${groupFlashcards.length} flashcards'),
+          children: groupFlashcards.map((fc) => _buildFlashcardItem(fc, theme)).toList(),
+        );
+      },
+    );
   }
 
   Widget _buildFAB(ThemeData theme) {
