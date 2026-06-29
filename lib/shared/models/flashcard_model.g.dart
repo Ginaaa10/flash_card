@@ -27,6 +27,8 @@ _$FlashcardModelImpl _$$FlashcardModelImplFromJson(Map<String, dynamic> json) =>
       lastReviewedAt: json['lastReviewedAt'] == null
           ? null
           : DateTime.parse(json['lastReviewedAt'] as String),
+      isFavorite: json['isFavorite'] as bool? ?? false,
+      groupName: json['groupName'] as String?,
     );
 
 Map<String, dynamic> _$$FlashcardModelImplToJson(
@@ -43,4 +45,6 @@ Map<String, dynamic> _$$FlashcardModelImplToJson(
       'tags': instance.tags,
       'reviewCount': instance.reviewCount,
       'lastReviewedAt': instance.lastReviewedAt?.toIso8601String(),
+      'isFavorite': instance.isFavorite,
+      'groupName': instance.groupName,
     };
