@@ -21,6 +21,26 @@ class WhiteboardNode {
     this.backgroundColor = Colors.yellow,
   });
 
+  WhiteboardNode copyWith({
+    String? id,
+    String? type,
+    String? content,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    Color? backgroundColor,
+  }) => WhiteboardNode(
+    id: id ?? this.id,
+    type: type ?? this.type,
+    content: content ?? this.content,
+    x: x ?? this.x,
+    y: y ?? this.y,
+    width: width ?? this.width,
+    height: height ?? this.height,
+    backgroundColor: backgroundColor ?? this.backgroundColor,
+  );
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'type': type,
