@@ -5,6 +5,12 @@ import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_pro
 import 'package:flash_card_app/features/recognition/domain/services/recognition_service.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
+import 'package:flash_card_app/shared/models/whiteboard_data.dart';
+import 'package:flash_card_app/features/whiteboard/presentation/widgets/infinite_canvas.dart';
+import 'package:flash_card_app/features/whiteboard/presentation/widgets/text_node.dart';
+import 'package:flash_card_app/features/whiteboard/presentation/widgets/sticky_node.dart';
+
+enum WhiteboardMode { draw, node }
 
 class WhiteboardScreen extends ConsumerStatefulWidget {
   final String? flashcardId;
@@ -16,6 +22,9 @@ class WhiteboardScreen extends ConsumerStatefulWidget {
 }
 
 class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
+  WhiteboardMode _mode = WhiteboardMode.draw;
+  final GlobalKey<InfiniteCanvasState> _canvasKey = GlobalKey();
+
   final List<StrokeModel> _strokes = [];
   final List<StrokeModel> _redoStack = [];
   StrokeModel? _currentStroke;
@@ -25,6 +34,9 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
   String? _recognizedText;
   final RecognitionService _recognitionService = RecognitionService();
   final List<PointModel> _currentPoints = [];
+
+  WhiteboardData _whiteboardData = WhiteboardData();
+  String? _selectedNodeId;
 
   @override
   void dispose() {
@@ -40,6 +52,7 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
       appBar: AppBar(
         title: const Text('Whiteboard'),
         actions: [
+          _buildModeToggle(theme),
           IconButton(
             icon: const Icon(Icons.auto_fix_high),
             onPressed: _isRecognizing ? null : _recognizeText,
@@ -76,7 +89,7 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
         children: [
           Expanded(
             child: Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -90,24 +103,11 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: GestureDetector(
-                  onPanStart: _onPanStart,
-                  onPanUpdate: _onPanUpdate,
-                  onPanEnd: _onPanEnd,
-                  child: CustomPaint(
-                    painter: _WhiteboardPainter(
-                      strokes: _strokes,
-                      currentStroke: _currentStroke,
-                      backgroundColor: Colors.white,
-                    ),
-                    size: Size.infinite,
-                  ),
-                ),
+                child: _buildCanvas(),
               ),
             ),
           ),
-          if (_isRecognizing)
-            const LinearProgressIndicator(),
+          if (_isRecognizing) const LinearProgressIndicator(),
           if (_recognizedText != null && _recognizedText!.isNotEmpty)
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -137,10 +137,7 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _recognizedText!,
-                    style: theme.textTheme.bodyLarge,
-                  ),
+                  Text(_recognizedText!, style: theme.textTheme.bodyLarge),
                 ],
               ),
             ),
@@ -151,7 +148,191 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
     );
   }
 
+  Widget _buildModeToggle(ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildModeButton(
+            mode: WhiteboardMode.draw,
+            icon: Icons.draw,
+            label: 'Draw',
+            theme: theme,
+          ),
+          _buildModeButton(
+            mode: WhiteboardMode.node,
+            icon: Icons.check_box_outlined,
+            label: 'Node',
+            theme: theme,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeButton({
+    required WhiteboardMode mode,
+    required IconData icon,
+    required String label,
+    required ThemeData theme,
+  }) {
+    final isActive = _mode == mode;
+    return GestureDetector(
+      onTap: () => setState(() => _mode = mode),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isActive ? theme.colorScheme.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isActive ? Colors.white : Colors.grey,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: isActive ? Colors.white : Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCanvas() {
+    if (_mode == WhiteboardMode.node) {
+      return _buildNodeCanvas();
+    }
+    return _buildDrawCanvas();
+  }
+
+  Widget _buildNodeCanvas() {
+    return InfiniteCanvas(
+      key: _canvasKey,
+      data: _whiteboardData,
+      onDataChanged: (data) {
+        setState(() => _whiteboardData = data);
+      },
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: _whiteboardData.nodes.map((node) {
+          if (node.type == 'sticky') {
+            return StickyNode(
+              node: node,
+              isSelected: _selectedNodeId == node.id,
+              onNodeChanged: _updateNode,
+              onNodeSelected: _selectNode,
+            );
+          }
+          return TextNode(
+            node: node,
+            isSelected: _selectedNodeId == node.id,
+            onNodeChanged: _updateNode,
+            onNodeSelected: _selectNode,
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildDrawCanvas() {
+    return GestureDetector(
+      onPanStart: _onPanStart,
+      onPanUpdate: _onPanUpdate,
+      onPanEnd: _onPanEnd,
+      child: CustomPaint(
+        painter: _WhiteboardPainter(
+          strokes: _strokes,
+          currentStroke: _currentStroke,
+          backgroundColor: Colors.white,
+        ),
+        size: Size.infinite,
+      ),
+    );
+  }
+
   Widget _buildToolbar(ThemeData theme) {
+    if (_mode == WhiteboardMode.node) {
+      return _buildNodeToolbar(theme);
+    }
+    return _buildDrawToolbar(theme);
+  }
+
+  Widget _buildNodeToolbar(ThemeData theme) {
+    return Container(
+      height: 60,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _buildToolbarAction(
+            icon: Icons.text_fields,
+            label: 'Text',
+            onTap: () => _addNode('text'),
+            theme: theme,
+          ),
+          const SizedBox(width: 12),
+          _buildToolbarAction(
+            icon: Icons.sticky_note_2,
+            label: 'Sticky',
+            onTap: () => _addNode('sticky'),
+            theme: theme,
+          ),
+          const SizedBox(width: 12),
+          _buildToolbarAction(
+            icon: Icons.undo,
+            label: 'Undo',
+            onTap: _undo,
+            enabled: _strokes.isNotEmpty,
+            theme: theme,
+          ),
+          const SizedBox(width: 12),
+          _buildToolbarAction(
+            icon: Icons.redo,
+            label: 'Redo',
+            onTap: _redo,
+            enabled: _redoStack.isNotEmpty,
+            theme: theme,
+          ),
+          const SizedBox(width: 12),
+          _buildToolbarAction(
+            icon: Icons.delete_outline,
+            label: 'Delete',
+            onTap: _deleteSelectedNode,
+            enabled: _selectedNodeId != null,
+            theme: theme,
+            color: Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawToolbar(ThemeData theme) {
     return Container(
       height: 100,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -194,6 +375,41 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
                 color: Colors.red,
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolbarAction({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool enabled = true,
+    required ThemeData theme,
+    Color? color,
+  }) {
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 22,
+            color: enabled
+                ? (color ?? theme.colorScheme.primary)
+                : Colors.grey.shade400,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: enabled
+                  ? (color ?? theme.colorScheme.onSurface)
+                  : Colors.grey.shade400,
+            ),
           ),
         ],
       ),
@@ -263,6 +479,50 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
         ),
       ),
     );
+  }
+
+  void _addNode(String type) {
+    final node = WhiteboardNode(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      type: type,
+      x: 100 + (_whiteboardData.nodes.length * 30).toDouble(),
+      y: 100 + (_whiteboardData.nodes.length * 30).toDouble(),
+      backgroundColor: type == 'sticky'
+          ? const Color(0xFFFFF176)
+          : Colors.white,
+    );
+    setState(() {
+      _whiteboardData = _whiteboardData.copyWith(
+        nodes: [..._whiteboardData.nodes, node],
+      );
+      _selectedNodeId = node.id;
+    });
+  }
+
+  void _updateNode(WhiteboardNode updatedNode) {
+    setState(() {
+      _whiteboardData = _whiteboardData.copyWith(
+        nodes: _whiteboardData.nodes.map((n) {
+          return n.id == updatedNode.id ? updatedNode : n;
+        }).toList(),
+      );
+    });
+  }
+
+  void _selectNode(String nodeId) {
+    setState(() => _selectedNodeId = nodeId.isEmpty ? null : nodeId);
+  }
+
+  void _deleteSelectedNode() {
+    if (_selectedNodeId == null) return;
+    setState(() {
+      _whiteboardData = _whiteboardData.copyWith(
+        nodes: _whiteboardData.nodes
+            .where((n) => n.id != _selectedNodeId)
+            .toList(),
+      );
+      _selectedNodeId = null;
+    });
   }
 
   void _onPanStart(DragStartDetails details) {
@@ -372,7 +632,7 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
   }
 
   Future<void> _saveAsFlashcard() async {
-    if (_strokes.isEmpty) {
+    if (_strokes.isEmpty && _whiteboardData.nodes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Draw something first')),
       );
