@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
-import 'package:flash_card_app/features/recognition/domain/services/recognition_service.dart';
+import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 
@@ -26,7 +26,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   String? _activeTool;
   String? _hoveredTool;
   final TextEditingController _titleController = TextEditingController();
-  final RecognitionService _recognitionService = RecognitionService();
+  final TesseractOcrService _ocrService = TesseractOcrService();
   final GlobalKey<_WhiteboardDrawingAreaState> _frontCanvasKey = GlobalKey();
   final GlobalKey<_WhiteboardDrawingAreaState> _backCanvasKey = GlobalKey();
   String? _frontRecognizedText;
@@ -85,7 +85,6 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _recognitionService.dispose();
     super.dispose();
   }
 
@@ -193,18 +192,28 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     setState(() => _isRecognizing = true);
 
     try {
-      final result = await _recognitionService.recognizeStrokes(strokes);
-      if (mounted && result != null && result.text.isNotEmpty) {
+      final imageBytes = await _ocrService.strokesToImageBytes(strokes);
+      if (imageBytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to process image')),
+          );
+        }
+        return;
+      }
+
+      final result = await _ocrService.recognizeImage(imageBytes);
+      if (mounted && result != null && result.isNotEmpty) {
         setState(() {
           if (_isFront) {
-            _frontRecognizedText = result.text;
+            _frontRecognizedText = result;
           } else {
-            _backRecognizedText = result.text;
+            _backRecognizedText = result;
           }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Recognized: "${result.text}"'),
+            content: Text('Recognized: "$result"'),
             duration: const Duration(seconds: 2),
           ),
         );
