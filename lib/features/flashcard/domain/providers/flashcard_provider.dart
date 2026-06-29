@@ -132,6 +132,38 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       ));
     }
   }
+
+  Future<void> toggleFavorite(String id) async {
+    final flashcard = getFlashcard(id);
+    if (flashcard != null) {
+      await updateFlashcard(flashcard.copyWith(
+        isFavorite: !flashcard.isFavorite,
+      ));
+    }
+  }
+
+  Future<void> setGroupName(String id, String? groupName) async {
+    final flashcard = getFlashcard(id);
+    if (flashcard != null) {
+      await updateFlashcard(flashcard.copyWith(
+        groupName: groupName,
+      ));
+    }
+  }
+
+  List<String> getAllGroups() {
+    final groups = <String>{};
+    for (final fc in state) {
+      if (fc.groupName != null && fc.groupName!.isNotEmpty) {
+        groups.add(fc.groupName!);
+      }
+    }
+    return groups.toList()..sort();
+  }
+
+  List<FlashcardModel> getFlashcardsByGroup(String groupName) {
+    return state.where((fc) => fc.groupName == groupName).toList();
+  }
 }
 
 final flashcardProvider =
@@ -151,17 +183,42 @@ final flashcardByIdProvider =
 
 final flashcardSearchProvider = StateProvider<String>((ref) => '');
 
+final flashcardGroupFilterProvider = StateProvider<String?>((ref) => null);
+
 final filteredFlashcardProvider = Provider<List<FlashcardModel>>((ref) {
   final flashcards = ref.watch(flashcardProvider);
   final searchQuery = ref.watch(flashcardSearchProvider);
+  final groupFilter = ref.watch(flashcardGroupFilterProvider);
 
-  if (searchQuery.isEmpty) return flashcards;
+  var result = flashcards;
+
+  if (groupFilter != null && groupFilter.isNotEmpty) {
+    result = result.where((fc) => fc.groupName == groupFilter).toList();
+  }
+
+  if (searchQuery.isEmpty) return result;
 
   final lowerQuery = searchQuery.toLowerCase();
-  return flashcards.where((fc) {
+  return result.where((fc) {
     return fc.title.toLowerCase().contains(lowerQuery) ||
         (fc.frontRecognizedText?.toLowerCase().contains(lowerQuery) ?? false) ||
         (fc.backRecognizedText?.toLowerCase().contains(lowerQuery) ?? false) ||
         fc.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
   }).toList();
+});
+
+final favoriteFlashcardProvider = Provider<List<FlashcardModel>>((ref) {
+  final flashcards = ref.watch(flashcardProvider);
+  return flashcards.where((fc) => fc.isFavorite).toList();
+});
+
+final allGroupsProvider = Provider<List<String>>((ref) {
+  final flashcards = ref.watch(flashcardProvider);
+  final groups = <String>{};
+  for (final fc in flashcards) {
+    if (fc.groupName != null && fc.groupName!.isNotEmpty) {
+      groups.add(fc.groupName!);
+    }
+  }
+  return groups.toList()..sort();
 });
