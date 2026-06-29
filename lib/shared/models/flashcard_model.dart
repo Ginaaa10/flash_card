@@ -18,6 +18,8 @@ class FlashcardModel with _$FlashcardModel {
     @Default([]) List<String> tags,
     @Default(0) int reviewCount,
     DateTime? lastReviewedAt,
+    @Default(false) bool isFavorite,
+    String? groupName,
   }) = _FlashcardModel;
 
   factory FlashcardModel.fromJson(Map<String, dynamic> json) => _$FlashcardModelFromJson(json);
