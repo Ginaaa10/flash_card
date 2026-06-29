@@ -23,7 +23,6 @@ class WhiteboardScreen extends ConsumerStatefulWidget {
 
 class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
   WhiteboardMode _mode = WhiteboardMode.draw;
-  final GlobalKey<InfiniteCanvasState> _canvasKey = GlobalKey();
 
   final List<StrokeModel> _strokes = [];
   final List<StrokeModel> _redoStack = [];
@@ -222,7 +221,6 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
 
   Widget _buildNodeCanvas() {
     return InfiniteCanvas(
-      key: _canvasKey,
       data: _whiteboardData,
       onDataChanged: (data) {
         setState(() => _whiteboardData = data);
