@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
-import 'package:flash_card_app/features/recognition/domain/services/recognition_service.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'package:flash_card_app/shared/models/whiteboard_data.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/infinite_canvas.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/text_node.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/sticky_node.dart';
+import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
 
 enum WhiteboardMode { draw, node }
 
@@ -31,7 +31,7 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
   double _currentWidth = 3.0;
   bool _isRecognizing = false;
   String? _recognizedText;
-  final RecognitionService _recognitionService = RecognitionService();
+  final TesseractOcrService _ocrService = TesseractOcrService();
   final List<PointModel> _currentPoints = [];
 
   WhiteboardData _whiteboardData = WhiteboardData();
@@ -39,7 +39,6 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
 
   @override
   void dispose() {
-    _recognitionService.dispose();
     super.dispose();
   }
 
@@ -602,6 +601,21 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
   }
 
   Future<void> _recognizeText() async {
+    if (_mode == WhiteboardMode.node) {
+      final nodeTexts = _whiteboardData.nodes
+          .where((n) => n.content.isNotEmpty)
+          .map((n) => n.content)
+          .join('\n');
+      if (nodeTexts.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Add text to nodes first')),
+        );
+        return;
+      }
+      setState(() => _recognizedText = nodeTexts);
+      return;
+    }
+
     if (_strokes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Draw something first')),
@@ -612,9 +626,26 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
     setState(() => _isRecognizing = true);
 
     try {
-      final result = await _recognitionService.recognizeStrokes(_strokes);
+      final imageBytes = await _ocrService.strokesToImageBytes(_strokes);
+      if (imageBytes == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to process image')),
+          );
+        }
+        return;
+      }
+
+      final result = await _ocrService.recognizeImage(imageBytes);
       if (result != null && mounted) {
-        setState(() => _recognizedText = result.text);
+        setState(() => _recognizedText = result);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No text recognized. Try clearer handwriting.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -698,11 +729,10 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
 
   void _showLanguageDialog() {
     final languages = {
-      'en-US': 'English',
-      'vi-VN': 'Tiếng Việt',
-      'zh-CN': '中文',
-      'ja-JP': '日本語',
-      'ko-KR': '한국어',
+      'vi+zh': 'Tiếng Việt + 中文',
+      'vi': 'Tiếng Việt',
+      'zh': '中文 (简体)',
+      'en': 'English',
     };
 
     showDialog(
@@ -715,10 +745,10 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
             return RadioListTile<String>(
               title: Text(entry.value),
               value: entry.key,
-              groupValue: _recognitionService.selectedLanguage,
+              groupValue: _ocrService.displayLanguage,
               onChanged: (value) {
                 if (value != null) {
-                  _recognitionService.setLanguage(value);
+                  _ocrService.setLanguage(value);
                 }
                 Navigator.pop(context);
               },
