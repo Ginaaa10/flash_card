@@ -1,3 +1,4 @@
+import 'dart:js' as js;
 import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:convert';
@@ -32,7 +33,7 @@ class TesseractOcrService {
       final base64Image = base64Encode(imageBytes);
       final dataUrl = 'data:image/png;base64,$base64Image';
       
-      final tesseract = html.window['Tesseract'];
+      final tesseract = js.context['Tesseract'];
       if (tesseract == null) {
         debugPrint('Tesseract.js not loaded');
         return null;
@@ -43,15 +44,15 @@ class TesseractOcrService {
       final promise = tesseract.callMethod('recognize', [dataUrl, _selectedLanguage]);
       
       promise.callMethod('then', [
-        (dynamic result) {
+        js.allowInterop((dynamic result) {
           final text = result['data']['text']?.toString() ?? '';
           completer.complete(text.isNotEmpty ? text.trim() : null);
-        },
+        }),
       ]).callMethod('catch', [
-        (dynamic error) {
+        js.allowInterop((dynamic error) {
           debugPrint('Tesseract error: $error');
           completer.complete(null);
-        },
+        }),
       ]);
       
       return await completer.future;
@@ -61,7 +62,7 @@ class TesseractOcrService {
     }
   }
 
-  Future<Uint8List?> strokesToImageBytes(
+Future<Uint8List?> strokesToImageBytes(
     List<dynamic> strokes, {
     double width = 800,
     double height = 200,
