@@ -31,6 +31,8 @@ mixin _$FlashcardModel {
   List<String> get tags => throw _privateConstructorUsedError;
   int get reviewCount => throw _privateConstructorUsedError;
   DateTime? get lastReviewedAt => throw _privateConstructorUsedError;
+  bool get isFavorite => throw _privateConstructorUsedError;
+  String? get groupName => throw _privateConstructorUsedError;
 
   /// Serializes this FlashcardModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -59,7 +61,9 @@ abstract class $FlashcardModelCopyWith<$Res> {
       DateTime updatedAt,
       List<String> tags,
       int reviewCount,
-      DateTime? lastReviewedAt});
+      DateTime? lastReviewedAt,
+      bool isFavorite,
+      String? groupName});
 }
 
 /// @nodoc
@@ -88,6 +92,8 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
     Object? tags = null,
     Object? reviewCount = null,
     Object? lastReviewedAt = freezed,
+    Object? isFavorite = null,
+    Object? groupName = freezed,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -134,6 +140,14 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
           ? _value.lastReviewedAt
           : lastReviewedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      isFavorite: null == isFavorite
+          ? _value.isFavorite
+          : isFavorite // ignore: cast_nullable_to_non_nullable
+              as bool,
+      groupName: freezed == groupName
+          ? _value.groupName
+          : groupName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ) as $Val);
   }
 }
@@ -157,7 +171,9 @@ abstract class _$$FlashcardModelImplCopyWith<$Res>
       DateTime updatedAt,
       List<String> tags,
       int reviewCount,
-      DateTime? lastReviewedAt});
+      DateTime? lastReviewedAt,
+      bool isFavorite,
+      String? groupName});
 }
 
 /// @nodoc
@@ -184,6 +200,8 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
     Object? tags = null,
     Object? reviewCount = null,
     Object? lastReviewedAt = freezed,
+    Object? isFavorite = null,
+    Object? groupName = freezed,
   }) {
     return _then(_$FlashcardModelImpl(
       id: null == id
@@ -230,6 +248,14 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
           ? _value.lastReviewedAt
           : lastReviewedAt // ignore: cast_nullable_to_non_nullable
               as DateTime?,
+      isFavorite: null == isFavorite
+          ? _value.isFavorite
+          : isFavorite // ignore: cast_nullable_to_non_nullable
+              as bool,
+      groupName: freezed == groupName
+          ? _value.groupName
+          : groupName // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -248,7 +274,9 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       required this.updatedAt,
       final List<String> tags = const [],
       this.reviewCount = 0,
-      this.lastReviewedAt})
+      this.lastReviewedAt,
+      this.isFavorite = false,
+      this.groupName})
       : _frontStrokes = frontStrokes,
         _backStrokes = backStrokes,
         _tags = tags;
@@ -300,8 +328,14 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   final DateTime? lastReviewedAt;
 
   @override
+  @JsonKey()
+  final bool isFavorite;
+  @override
+  final String? groupName;
+
+  @override
   String toString() {
-    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt)';
+    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName)';
   }
 
   @override
@@ -327,7 +361,11 @@ class _$FlashcardModelImpl implements _FlashcardModel {
             (identical(other.reviewCount, reviewCount) ||
                 other.reviewCount == reviewCount) &&
             (identical(other.lastReviewedAt, lastReviewedAt) ||
-                other.lastReviewedAt == lastReviewedAt));
+                other.lastReviewedAt == lastReviewedAt) &&
+            (identical(other.isFavorite, isFavorite) ||
+                other.isFavorite == isFavorite) &&
+            (identical(other.groupName, groupName) ||
+                other.groupName == groupName));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -344,7 +382,9 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       updatedAt,
       const DeepCollectionEquality().hash(_tags),
       reviewCount,
-      lastReviewedAt);
+      lastReviewedAt,
+      isFavorite,
+      groupName);
 
   /// Create a copy of FlashcardModel
   /// with the given fields replaced by the non-null parameter values.
@@ -375,7 +415,9 @@ abstract class _FlashcardModel implements FlashcardModel {
       required final DateTime updatedAt,
       final List<String> tags,
       final int reviewCount,
-      final DateTime? lastReviewedAt}) = _$FlashcardModelImpl;
+      final DateTime? lastReviewedAt,
+      final bool isFavorite,
+      final String? groupName}) = _$FlashcardModelImpl;
 
   factory _FlashcardModel.fromJson(Map<String, dynamic> json) =
       _$FlashcardModelImpl.fromJson;
@@ -402,6 +444,10 @@ abstract class _FlashcardModel implements FlashcardModel {
   int get reviewCount;
   @override
   DateTime? get lastReviewedAt;
+  @override
+  bool get isFavorite;
+  @override
+  String? get groupName;
 
   /// Create a copy of FlashcardModel
   /// with the given fields replaced by the non-null parameter values.
