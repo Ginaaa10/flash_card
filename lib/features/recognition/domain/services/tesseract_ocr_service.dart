@@ -1,4 +1,3 @@
-import 'dart:js_util' as js_util;
 import 'dart:html' as html;
 import 'dart:typed_data';
 import 'dart:convert';
@@ -33,21 +32,29 @@ class TesseractOcrService {
       final base64Image = base64Encode(imageBytes);
       final dataUrl = 'data:image/png;base64,$base64Image';
       
-      final jsObject = js_util.jsify({
-        'logger': (dynamic m) => debugPrint('Tesseract: $m'),
-      });
+      final tesseract = html.window['Tesseract'];
+      if (tesseract == null) {
+        debugPrint('Tesseract.js not loaded');
+        return null;
+      }
+
+      final completer = Completer<String?>();
       
-      final promise = js_util.callMethod(
-        js_util.context['Tesseract'] as Object,
-        'recognize',
-        [dataUrl, _selectedLanguage, jsObject],
-      );
+      final promise = tesseract.callMethod('recognize', [dataUrl, _selectedLanguage]);
       
-      final result = await js_util.promiseToFuture<Map<dynamic, dynamic>>(promise);
-      final data = result['data'] as Map<dynamic, dynamic>;
-      final text = data['text'] as String? ?? '';
+      promise.callMethod('then', [
+        (dynamic result) {
+          final text = result['data']['text']?.toString() ?? '';
+          completer.complete(text.isNotEmpty ? text.trim() : null);
+        },
+      ]).callMethod('catch', [
+        (dynamic error) {
+          debugPrint('Tesseract error: $error');
+          completer.complete(null);
+        },
+      ]);
       
-      return text.isNotEmpty ? text.trim() : null;
+      return await completer.future;
     } catch (e) {
       debugPrint('Tesseract OCR error: $e');
       return null;
