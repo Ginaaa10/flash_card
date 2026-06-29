@@ -29,9 +29,6 @@ dependencies:
   freezed_annotation: ^2.4.1
   json_annotation: ^4.8.1
 
-  # ML Kit Digital Ink Recognition (Android)
-  google_mlkit_digital_ink_recognition: ^0.7.0
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
