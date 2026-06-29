@@ -21,6 +21,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   bool _isRecognizing = false;
   bool _isEditingTitle = false;
   bool _isSaving = false;
+  bool _isFavorite = false;
+  String? _groupName;
   String? _activeTool;
   String? _hoveredTool;
   final TextEditingController _titleController = TextEditingController();
@@ -44,6 +46,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
         _titleController.text = flashcard.title;
         _frontRecognizedText = flashcard.frontRecognizedText;
         _backRecognizedText = flashcard.backRecognizedText;
+        _isFavorite = flashcard.isFavorite;
+        _groupName = flashcard.groupName;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _frontCanvasKey.currentState?.loadStrokes(flashcard.frontStrokes);
@@ -416,8 +420,18 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
       child: IndexedStack(
         index: _isFront ? 0 : 1,
         children: [
-          _WhiteboardDrawingArea(key: _frontCanvasKey),
-          _WhiteboardDrawingArea(key: _backCanvasKey),
+          _WhiteboardDrawingArea(
+            key: _frontCanvasKey,
+            onStateChanged: () {
+              if (mounted) setState(() {});
+            },
+          ),
+          _WhiteboardDrawingArea(
+            key: _backCanvasKey,
+            onStateChanged: () {
+              if (mounted) setState(() {});
+            },
+          ),
         ],
       ),
     );
@@ -643,7 +657,9 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
 }
 
 class _WhiteboardDrawingArea extends StatefulWidget {
-  const _WhiteboardDrawingArea({super.key});
+  final VoidCallback? onStateChanged;
+
+  const _WhiteboardDrawingArea({super.key, this.onStateChanged});
 
   @override
   State<_WhiteboardDrawingArea> createState() =>
@@ -667,6 +683,7 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
         ..addAll(strokes);
       _redoStack.clear();
     });
+    widget.onStateChanged?.call();
   }
 
   void undo() {
@@ -674,6 +691,7 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
     setState(() {
       _redoStack.add(_strokes.removeLast());
     });
+    widget.onStateChanged?.call();
   }
 
   void redo() {
@@ -681,6 +699,7 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
     setState(() {
       _strokes.add(_redoStack.removeLast());
     });
+    widget.onStateChanged?.call();
   }
 
   void clear() {
@@ -690,6 +709,7 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
       _currentStroke = null;
       _currentPoints.clear();
     });
+    widget.onStateChanged?.call();
   }
 
   @override
@@ -762,6 +782,7 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
       _currentStroke = null;
       _currentPoints.clear();
     });
+    widget.onStateChanged?.call();
   }
 }
 
