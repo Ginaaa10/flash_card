@@ -1,70 +1,40 @@
-# Flash Card App
+# flash_card — Whiteboard OCR & Question Generation
 
-Ứng dụng flash card với whiteboard viết tay và nhận diện chữ viết sử dụng Google ML Kit.
+This commit adds a whiteboard drawing widget, on-device OCR integration, and a small server to generate questions (optionally using OpenAI).
 
-## Tính năng
+What I added
+- lib/widgets/whiteboard.dart — simple drawable whiteboard widget (RepaintBoundary)
+- lib/widgets/whiteboard_capture.dart — button to capture whiteboard, run OCR, and call backend
+- lib/services/ocr_service.dart — on-device OCR using google_mlkit_text_recognition
+- lib/services/question_generator_service.dart — sends recognized text to backend
+- server/index.js & server/package.json — minimal Express server that calls OpenAI if OPENAI_API_KEY is set; otherwise returns dummy questions
+- updated pubspec.yaml to include necessary packages
 
-- **Whiteboard viết tay**: Vẽ trực tiếp trên flash card với nhiều màu sắc và kích thước bút
-- **Nhận diện chữ viết**: Sử dụng Google ML Kit Digital Ink Recognition để nhận diện chữ viết tay
-- **Quản lý flash card**: Tạo, chỉnh sửa, xóa flash card
-- **Lưu trữ cục bộ**: Dữ liệu được lưu bằng Hive
-- **Cross-platform**: Hỗ trợ Android và Web
+How to run (Flutter app)
+1. Install packages: flutter pub get
+2. Use the Whiteboard widget in your app. Example quick usage:
 
-## Cài đặt
+```dart
+final wbKey = GlobalKey();
 
-### Yêu cầu
-- Flutter SDK >= 3.2.0
-- Android Studio / VS Code
-- Java JDK 11+
-
-### Chạy ứng dụng
-
-```bash
-# Cài đặt dependencies
-flutter pub get
-
-# Chạy trên Android
-flutter run
-
-# Chạy trên Web
-flutter run -d chrome
+Column(
+  children: [
+    Expanded(child: Whiteboard(repaintKey: wbKey)),
+    WhiteboardCaptureButton(repaintKey: wbKey),
+  ],
+)
 ```
 
-## Cấu trúc dự án
+3. Run the app on device/emulator. Note: for Android emulator the default backend URL in the Flutter code points to http://10.0.2.2:8080/generate. If you run the server elsewhere, set the environment variable QUESTION_BACKEND_URL when building or change the string in code.
 
-```
-lib/
-├── core/
-│   ├── constants/        # Hằng số ứng dụng
-│   ├── theme/           # Giao diện light/dark theme
-│   └── utils/           # Router, utilities
-├── features/
-│   ├── flashcard/       # Tính năng flash card
-│   │   ├── data/
-│   │   ├── domain/      # Providers, state management
-│   │   └── presentation/ # UI screens
-│   ├── whiteboard/      # Tính năng whiteboard
-│   │   ├── data/
-│   │   ├── domain/
-│   │   └── presentation/ # Canvas, toolbar
-│   └── recognition/     # Tính năng nhận diện chữ viết
-│       └── domain/
-│           └── services/ # ML Kit integration
-└── shared/
-    ├── models/          # Data models (Flashcard, Stroke, Point)
-    ├── services/        # Storage service
-    └── widgets/         # Shared widgets
-```
+How to run the server (node)
+1. cd server
+2. npm install
+3. (Optional) Set OPENAI_API_KEY environment variable to enable real question generation using OpenAI.
+4. npm start
 
-## Tech Stack
+Security & notes
+- Do NOT commit your OpenAI API key. Set it in the environment on your server or machine.
+- The server attempts to parse the assistant output as JSON; prompt the model to return valid JSON only for best results.
 
-- **Flutter** - Cross-platform framework
-- **Riverpod** - State management
-- **GoRouter** - Navigation
-- **Hive** - Local storage
-- **Google ML Kit** - Digital Ink Recognition
-- **Freezed** - Immutable data classes
-
-## License
-
-MIT License
+If you want, I can open a PR from branch `feature/whiteboard-ocr` into `main` and/or tweak the prompt templates and JSON schema.

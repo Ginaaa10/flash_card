@@ -29,6 +29,11 @@ dependencies:
   freezed_annotation: ^2.4.1
   json_annotation: ^4.8.1
 
+  # OCR (on-device)
+  google_mlkit_text_recognition: ^0.9.0
+  path_provider: ^2.0.15
+  http: ^0.13.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
