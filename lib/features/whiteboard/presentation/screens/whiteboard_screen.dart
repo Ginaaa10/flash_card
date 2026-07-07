@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
+import 'package:flash_card_app/features/flashcard/domain/providers/question_provider.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'package:flash_card_app/shared/models/whiteboard_data.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/infinite_canvas.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/text_node.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/sticky_node.dart';
+import 'package:flash_card_app/features/whiteboard/presentation/dialogs/question_generation_dialog.dart';
 import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
 
 enum WhiteboardMode { draw, node }
@@ -55,6 +57,11 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
             icon: const Icon(Icons.auto_fix_high),
             onPressed: _isRecognizing ? null : _recognizeText,
             tooltip: 'Recognize',
+          ),
+          IconButton(
+            icon: const Icon(Icons.quiz),
+            onPressed: (_recognizedText == null || _recognizedText!.isEmpty) ? null : _showGenerateQuestionsDialog,
+            tooltip: 'Generate Questions',
           ),
           IconButton(
             icon: const Icon(Icons.save),
@@ -658,6 +665,48 @@ class _WhiteboardScreenState extends ConsumerState<WhiteboardScreen> {
         setState(() => _isRecognizing = false);
       }
     }
+  }
+
+  void _showGenerateQuestionsDialog() {
+    if (_recognizedText == null || _recognizedText!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please recognize text first')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => QuestionGenerationDialog(
+        recognizedText: _recognizedText!,
+        flashcardId: widget.flashcardId ?? '',
+        onGenerateQuestions: _generateQuestions,
+      ),
+    ).then((questions) {
+      if (questions != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Successfully generated ${questions.length} questions'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    });
+  }
+
+  Future<List<QuestionModel>> _generateQuestions({
+    required String text,
+    required String flashcardId,
+    required String questionType,
+    required int numberOfQuestions,
+  }) async {
+    final questionNotifier = ref.read(questionProvider.notifier);
+    return questionNotifier.generateQuestions(
+      text: text,
+      flashcardId: flashcardId,
+      questionType: questionType,
+      numberOfQuestions: numberOfQuestions,
+    );
   }
 
   Future<void> _saveAsFlashcard() async {
