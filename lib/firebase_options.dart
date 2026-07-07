@@ -1,9 +1,14 @@
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show defaultTargetPlatform, TargetPlatform, kIsWeb;
 
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
+    // On Flutter web builds the [defaultTargetPlatform] can sometimes report
+    // a desktop platform (e.g. TargetPlatform.linux). Use kIsWeb to reliably
+    // detect web and return the web FirebaseOptions.
+    if (kIsWeb) return web;
+
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
         throw UnsupportedError(
