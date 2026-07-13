@@ -33,6 +33,12 @@ mixin _$FlashcardModel {
   DateTime? get lastReviewedAt => throw _privateConstructorUsedError;
   bool get isFavorite => throw _privateConstructorUsedError;
   String? get groupName => throw _privateConstructorUsedError;
+  String? get frontBackgroundImage => throw _privateConstructorUsedError;
+  String? get backBackgroundImage => throw _privateConstructorUsedError;
+  String get borderStyle => throw _privateConstructorUsedError;
+  int get borderColor => throw _privateConstructorUsedError;
+  double get borderWidth => throw _privateConstructorUsedError;
+  double get borderRadius => throw _privateConstructorUsedError;
 
   /// Serializes this FlashcardModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -63,7 +69,13 @@ abstract class $FlashcardModelCopyWith<$Res> {
       int reviewCount,
       DateTime? lastReviewedAt,
       bool isFavorite,
-      String? groupName});
+      String? groupName,
+      String? frontBackgroundImage,
+      String? backBackgroundImage,
+      String borderStyle,
+      int borderColor,
+      double borderWidth,
+      double borderRadius});
 }
 
 /// @nodoc
@@ -94,6 +106,12 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
     Object? lastReviewedAt = freezed,
     Object? isFavorite = null,
     Object? groupName = freezed,
+    Object? frontBackgroundImage = freezed,
+    Object? backBackgroundImage = freezed,
+    Object? borderStyle = null,
+    Object? borderColor = null,
+    Object? borderWidth = null,
+    Object? borderRadius = null,
   }) {
     return _then(_value.copyWith(
       id: null == id
@@ -148,6 +166,30 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
           ? _value.groupName
           : groupName // ignore: cast_nullable_to_non_nullable
               as String?,
+      frontBackgroundImage: freezed == frontBackgroundImage
+          ? _value.frontBackgroundImage
+          : frontBackgroundImage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      backBackgroundImage: freezed == backBackgroundImage
+          ? _value.backBackgroundImage
+          : backBackgroundImage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      borderStyle: null == borderStyle
+          ? _value.borderStyle
+          : borderStyle // ignore: cast_nullable_to_non_nullable
+              as String,
+      borderColor: null == borderColor
+          ? _value.borderColor
+          : borderColor // ignore: cast_nullable_to_non_nullable
+              as int,
+      borderWidth: null == borderWidth
+          ? _value.borderWidth
+          : borderWidth // ignore: cast_nullable_to_non_nullable
+              as double,
+      borderRadius: null == borderRadius
+          ? _value.borderRadius
+          : borderRadius // ignore: cast_nullable_to_non_nullable
+              as double,
     ) as $Val);
   }
 }
@@ -173,7 +215,13 @@ abstract class _$$FlashcardModelImplCopyWith<$Res>
       int reviewCount,
       DateTime? lastReviewedAt,
       bool isFavorite,
-      String? groupName});
+      String? groupName,
+      String? frontBackgroundImage,
+      String? backBackgroundImage,
+      String borderStyle,
+      int borderColor,
+      double borderWidth,
+      double borderRadius});
 }
 
 /// @nodoc
@@ -202,6 +250,12 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
     Object? lastReviewedAt = freezed,
     Object? isFavorite = null,
     Object? groupName = freezed,
+    Object? frontBackgroundImage = freezed,
+    Object? backBackgroundImage = freezed,
+    Object? borderStyle = null,
+    Object? borderColor = null,
+    Object? borderWidth = null,
+    Object? borderRadius = null,
   }) {
     return _then(_$FlashcardModelImpl(
       id: null == id
@@ -256,6 +310,30 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
           ? _value.groupName
           : groupName // ignore: cast_nullable_to_non_nullable
               as String?,
+      frontBackgroundImage: freezed == frontBackgroundImage
+          ? _value.frontBackgroundImage
+          : frontBackgroundImage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      backBackgroundImage: freezed == backBackgroundImage
+          ? _value.backBackgroundImage
+          : backBackgroundImage // ignore: cast_nullable_to_non_nullable
+              as String?,
+      borderStyle: null == borderStyle
+          ? _value.borderStyle
+          : borderStyle // ignore: cast_nullable_to_non_nullable
+              as String,
+      borderColor: null == borderColor
+          ? _value.borderColor
+          : borderColor // ignore: cast_nullable_to_non_nullable
+              as int,
+      borderWidth: null == borderWidth
+          ? _value.borderWidth
+          : borderWidth // ignore: cast_nullable_to_non_nullable
+              as double,
+      borderRadius: null == borderRadius
+          ? _value.borderRadius
+          : borderRadius // ignore: cast_nullable_to_non_nullable
+              as double,
     ));
   }
 }
@@ -276,7 +354,13 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       this.reviewCount = 0,
       this.lastReviewedAt,
       this.isFavorite = false,
-      this.groupName})
+      this.groupName,
+      this.frontBackgroundImage,
+      this.backBackgroundImage,
+      this.borderStyle = 'solid',
+      this.borderColor = 0xFF6366F1,
+      this.borderWidth = 2.0,
+      this.borderRadius = 16.0})
       : _frontStrokes = frontStrokes,
         _backStrokes = backStrokes,
         _tags = tags;
@@ -332,10 +416,22 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   final bool isFavorite;
   @override
   final String? groupName;
+  @override
+  final String? frontBackgroundImage;
+  @override
+  final String? backBackgroundImage;
+  @override
+  final String borderStyle;
+  @override
+  final int borderColor;
+  @override
+  final double borderWidth;
+  @override
+  final double borderRadius;
 
   @override
   String toString() {
-    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName)';
+    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
   }
 
   @override
@@ -355,7 +451,7 @@ class _$FlashcardModelImpl implements _FlashcardModel {
                 other.backRecognizedText == backRecognizedText) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.updatedAt, updatedAt) ||
+            (identical(other.updateAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.reviewCount, reviewCount) ||
@@ -365,7 +461,19 @@ class _$FlashcardModelImpl implements _FlashcardModel {
             (identical(other.isFavorite, isFavorite) ||
                 other.isFavorite == isFavorite) &&
             (identical(other.groupName, groupName) ||
-                other.groupName == groupName));
+                other.groupName == groupName) &&
+            (identical(other.frontBackgroundImage, frontBackgroundImage) ||
+                other.frontBackgroundImage == frontBackgroundImage) &&
+            (identical(other.backBackgroundImage, backBackgroundImage) ||
+                other.backBackgroundImage == backBackgroundImage) &&
+            (identical(other.borderStyle, borderStyle) ||
+                other.borderStyle == borderStyle) &&
+            (identical(other.borderColor, borderColor) ||
+                other.borderColor == borderColor) &&
+            (identical(other.borderWidth, borderWidth) ||
+                other.borderWidth == borderWidth) &&
+            (identical(other.borderRadius, borderRadius) ||
+                other.borderRadius == borderRadius));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -384,7 +492,13 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       reviewCount,
       lastReviewedAt,
       isFavorite,
-      groupName);
+      groupName,
+      frontBackgroundImage,
+      backBackgroundImage,
+      borderStyle,
+      borderColor,
+      borderWidth,
+      borderRadius);
 
   /// Create a copy of FlashcardModel
   /// with the given fields replaced by the non-null parameter values.
@@ -417,7 +531,13 @@ abstract class _FlashcardModel implements FlashcardModel {
       final int reviewCount,
       final DateTime? lastReviewedAt,
       final bool isFavorite,
-      final String? groupName}) = _$FlashcardModelImpl;
+      final String? groupName,
+      final String? frontBackgroundImage,
+      final String? backBackgroundImage,
+      final String borderStyle,
+      final int borderColor,
+      final double borderWidth,
+      final double borderRadius}) = _$FlashcardModelImpl;
 
   factory _FlashcardModel.fromJson(Map<String, dynamic> json) =
       _$FlashcardModelImpl.fromJson;
@@ -448,6 +568,18 @@ abstract class _FlashcardModel implements FlashcardModel {
   bool get isFavorite;
   @override
   String? get groupName;
+  @override
+  String? get frontBackgroundImage;
+  @override
+  String? get backBackgroundImage;
+  @override
+  String get borderStyle;
+  @override
+  int get borderColor;
+  @override
+  double get borderWidth;
+  @override
+  double get borderRadius;
 
   /// Create a copy of FlashcardModel
   /// with the given fields replaced by the non-null parameter values.
