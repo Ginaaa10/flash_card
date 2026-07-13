@@ -20,6 +20,12 @@ class FlashcardModel with _$FlashcardModel {
     DateTime? lastReviewedAt,
     @Default(false) bool isFavorite,
     String? groupName,
+    String? frontBackgroundImage,
+    String? backBackgroundImage,
+    @Default('solid') String borderStyle,
+    @Default(0xFF6366F1) int borderColor,
+    @Default(2.0) double borderWidth,
+    @Default(16.0) double borderRadius,
   }) = _FlashcardModel;
 
   factory FlashcardModel.fromJson(Map<String, dynamic> json) => _$FlashcardModelFromJson(json);
