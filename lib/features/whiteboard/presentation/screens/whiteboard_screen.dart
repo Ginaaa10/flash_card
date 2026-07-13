@@ -6,6 +6,7 @@ import 'package:flash_card_app/features/flashcard/domain/providers/question_prov
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'package:flash_card_app/shared/models/whiteboard_data.dart';
+import 'package:flash_card_app/shared/models/question_model.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/infinite_canvas.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/text_node.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/widgets/sticky_node.dart';
