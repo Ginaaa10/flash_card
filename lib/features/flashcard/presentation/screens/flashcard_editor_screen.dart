@@ -5,6 +5,8 @@ import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_pro
 import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
+import 'dart:typed_data';
+import 'dart:html' as html;
 
 class FlashcardEditorScreen extends ConsumerStatefulWidget {
   final String? flashcardId;
@@ -23,6 +25,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   bool _isSaving = false;
   bool _isFavorite = false;
   String? _groupName;
+  String? _frontBackgroundImage;
+  String? _backBackgroundImage;
+  String _borderStyle = 'solid';
+  int _borderColor = 0xFF6366F1;
+  double _borderWidth = 2.0;
+  double _borderRadius = 16.0;
   String? _activeTool;
   String? _hoveredTool;
   final TextEditingController _titleController = TextEditingController();
