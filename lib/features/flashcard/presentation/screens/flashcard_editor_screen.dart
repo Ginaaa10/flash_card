@@ -6,7 +6,6 @@ import 'package:flash_card_app/features/recognition/domain/services/tesseract_oc
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'dart:typed_data';
-import 'dart:html' as html;
 
 class FlashcardEditorScreen extends ConsumerStatefulWidget {
   final String? flashcardId;
