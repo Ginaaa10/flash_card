@@ -29,6 +29,12 @@ _$FlashcardModelImpl _$$FlashcardModelImplFromJson(Map<String, dynamic> json) =>
           : DateTime.parse(json['lastReviewedAt'] as String),
       isFavorite: json['isFavorite'] as bool? ?? false,
       groupName: json['groupName'] as String?,
+      frontBackgroundImage: json['frontBackgroundImage'] as String?,
+      backBackgroundImage: json['backBackgroundImage'] as String?,
+      borderStyle: json['borderStyle'] as String? ?? 'solid',
+      borderColor: (json['borderColor'] as num?)?.toInt() ?? 0xFF6366F1,
+      borderWidth: (json['borderWidth'] as num?)?.toDouble() ?? 2.0,
+      borderRadius: (json['borderRadius'] as num?)?.toDouble() ?? 16.0,
     );
 
 Map<String, dynamic> _$$FlashcardModelImplToJson(
@@ -47,4 +53,10 @@ Map<String, dynamic> _$$FlashcardModelImplToJson(
       'lastReviewedAt': instance.lastReviewedAt?.toIso8601String(),
       'isFavorite': instance.isFavorite,
       'groupName': instance.groupName,
+      'frontBackgroundImage': instance.frontBackgroundImage,
+      'backBackgroundImage': instance.backBackgroundImage,
+      'borderStyle': instance.borderStyle,
+      'borderColor': instance.borderColor,
+      'borderWidth': instance.borderWidth,
+      'borderRadius': instance.borderRadius,
     };
