@@ -44,6 +44,14 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
     required String title,
     List<StrokeModel>? frontStrokes,
     List<StrokeModel>? backStrokes,
+    String? frontText,
+    String? backText,
+    String? frontBackgroundImage,
+    String? backBackgroundImage,
+    String borderStyle = 'solid',
+    int borderColor = 0xFF6366F1,
+    double borderWidth = 2.0,
+    double borderRadius = 16.0,
   }) async {
     final now = DateTime.now();
     final flashcard = FlashcardModel(
@@ -51,10 +59,18 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       title: title,
       frontStrokes: frontStrokes ?? [],
       backStrokes: backStrokes ?? [],
+      frontText: frontText,
+      backText: backText,
       createdAt: now,
       updatedAt: now,
       tags: [],
       reviewCount: 0,
+      frontBackgroundImage: frontBackgroundImage,
+      backBackgroundImage: backBackgroundImage,
+      borderStyle: borderStyle,
+      borderColor: borderColor,
+      borderWidth: borderWidth,
+      borderRadius: borderRadius,
     );
     await FirestoreService.saveFlashcard(flashcard);
     state = [flashcard, ...state];

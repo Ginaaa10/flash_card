@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flash_card_app/features/flashcard/presentation/screens/flashcard_list_screen.dart';
 import 'package:flash_card_app/features/flashcard/presentation/screens/flashcard_editor_screen.dart';
+import 'package:flash_card_app/features/flashcard/presentation/screens/quiz_screen.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/screens/whiteboard_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -26,6 +27,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/whiteboard',
         name: 'whiteboard',
         builder: (context, state) => const WhiteboardScreen(),
+      ),
+      GoRoute(
+        path: '/quiz',
+        name: 'quiz',
+        builder: (context, state) => const QuizScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
