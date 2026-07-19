@@ -24,6 +24,8 @@ mixin _$FlashcardModel {
   String get title => throw _privateConstructorUsedError;
   List<StrokeModel> get frontStrokes => throw _privateConstructorUsedError;
   List<StrokeModel> get backStrokes => throw _privateConstructorUsedError;
+  String? get frontText => throw _privateConstructorUsedError;
+  String? get backText => throw _privateConstructorUsedError;
   String? get frontRecognizedText => throw _privateConstructorUsedError;
   String? get backRecognizedText => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -40,12 +42,8 @@ mixin _$FlashcardModel {
   double get borderWidth => throw _privateConstructorUsedError;
   double get borderRadius => throw _privateConstructorUsedError;
 
-  /// Serializes this FlashcardModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of FlashcardModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $FlashcardModelCopyWith<FlashcardModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -61,6 +59,8 @@ abstract class $FlashcardModelCopyWith<$Res> {
       String title,
       List<StrokeModel> frontStrokes,
       List<StrokeModel> backStrokes,
+      String? frontText,
+      String? backText,
       String? frontRecognizedText,
       String? backRecognizedText,
       DateTime createdAt,
@@ -88,8 +88,6 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of FlashcardModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -97,6 +95,8 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
     Object? title = null,
     Object? frontStrokes = null,
     Object? backStrokes = null,
+    Object? frontText = freezed,
+    Object? backText = freezed,
     Object? frontRecognizedText = freezed,
     Object? backRecognizedText = freezed,
     Object? createdAt = null,
@@ -130,6 +130,14 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
           ? _value.backStrokes
           : backStrokes // ignore: cast_nullable_to_non_nullable
               as List<StrokeModel>,
+      frontText: freezed == frontText
+          ? _value.frontText
+          : frontText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      backText: freezed == backText
+          ? _value.backText
+          : backText // ignore: cast_nullable_to_non_nullable
+              as String?,
       frontRecognizedText: freezed == frontRecognizedText
           ? _value.frontRecognizedText
           : frontRecognizedText // ignore: cast_nullable_to_non_nullable
@@ -207,6 +215,8 @@ abstract class _$$FlashcardModelImplCopyWith<$Res>
       String title,
       List<StrokeModel> frontStrokes,
       List<StrokeModel> backStrokes,
+      String? frontText,
+      String? backText,
       String? frontRecognizedText,
       String? backRecognizedText,
       DateTime createdAt,
@@ -232,8 +242,6 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
       _$FlashcardModelImpl _value, $Res Function(_$FlashcardModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of FlashcardModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -241,6 +249,8 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
     Object? title = null,
     Object? frontStrokes = null,
     Object? backStrokes = null,
+    Object? frontText = freezed,
+    Object? backText = freezed,
     Object? frontRecognizedText = freezed,
     Object? backRecognizedText = freezed,
     Object? createdAt = null,
@@ -274,6 +284,14 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
           ? _value._backStrokes
           : backStrokes // ignore: cast_nullable_to_non_nullable
               as List<StrokeModel>,
+      frontText: freezed == frontText
+          ? _value.frontText
+          : frontText // ignore: cast_nullable_to_non_nullable
+              as String?,
+      backText: freezed == backText
+          ? _value.backText
+          : backText // ignore: cast_nullable_to_non_nullable
+              as String?,
       frontRecognizedText: freezed == frontRecognizedText
           ? _value.frontRecognizedText
           : frontRecognizedText // ignore: cast_nullable_to_non_nullable
@@ -346,6 +364,8 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       required this.title,
       required final List<StrokeModel> frontStrokes,
       required final List<StrokeModel> backStrokes,
+      this.frontText,
+      this.backText,
       this.frontRecognizedText,
       this.backRecognizedText,
       required this.createdAt,
@@ -389,6 +409,10 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   }
 
   @override
+  final String? frontText;
+  @override
+  final String? backText;
+  @override
   final String? frontRecognizedText;
   @override
   final String? backRecognizedText;
@@ -410,7 +434,6 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   final int reviewCount;
   @override
   final DateTime? lastReviewedAt;
-
   @override
   @JsonKey()
   final bool isFavorite;
@@ -421,17 +444,21 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   @override
   final String? backBackgroundImage;
   @override
+  @JsonKey()
   final String borderStyle;
   @override
+  @JsonKey()
   final int borderColor;
   @override
+  @JsonKey()
   final double borderWidth;
   @override
+  @JsonKey()
   final double borderRadius;
 
   @override
   String toString() {
-    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
+    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontText: $frontText, backText: $backText, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
   }
 
   @override
@@ -445,13 +472,17 @@ class _$FlashcardModelImpl implements _FlashcardModel {
                 .equals(other._frontStrokes, _frontStrokes) &&
             const DeepCollectionEquality()
                 .equals(other._backStrokes, _backStrokes) &&
+            (identical(other.frontText, frontText) ||
+                other.frontText == frontText) &&
+            (identical(other.backText, backText) ||
+                other.backText == backText) &&
             (identical(other.frontRecognizedText, frontRecognizedText) ||
                 other.frontRecognizedText == frontRecognizedText) &&
             (identical(other.backRecognizedText, backRecognizedText) ||
                 other.backRecognizedText == backRecognizedText) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
-            (identical(other.updateAt, updatedAt) ||
+            (identical(other.updatedAt, updatedAt) ||
                 other.updatedAt == updatedAt) &&
             const DeepCollectionEquality().equals(other._tags, _tags) &&
             (identical(other.reviewCount, reviewCount) ||
@@ -476,33 +507,34 @@ class _$FlashcardModelImpl implements _FlashcardModel {
                 other.borderRadius == borderRadius));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      title,
-      const DeepCollectionEquality().hash(_frontStrokes),
-      const DeepCollectionEquality().hash(_backStrokes),
-      frontRecognizedText,
-      backRecognizedText,
-      createdAt,
-      updatedAt,
-      const DeepCollectionEquality().hash(_tags),
-      reviewCount,
-      lastReviewedAt,
-      isFavorite,
-      groupName,
-      frontBackgroundImage,
-      backBackgroundImage,
-      borderStyle,
-      borderColor,
-      borderWidth,
-      borderRadius);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        title,
+        const DeepCollectionEquality().hash(_frontStrokes),
+        const DeepCollectionEquality().hash(_backStrokes),
+        frontText,
+        backText,
+        frontRecognizedText,
+        backRecognizedText,
+        createdAt,
+        updatedAt,
+        const DeepCollectionEquality().hash(_tags),
+        reviewCount,
+        lastReviewedAt,
+        isFavorite,
+        groupName,
+        frontBackgroundImage,
+        backBackgroundImage,
+        borderStyle,
+        borderColor,
+        borderWidth,
+        borderRadius
+      ]);
 
-  /// Create a copy of FlashcardModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$FlashcardModelImplCopyWith<_$FlashcardModelImpl> get copyWith =>
@@ -523,6 +555,8 @@ abstract class _FlashcardModel implements FlashcardModel {
       required final String title,
       required final List<StrokeModel> frontStrokes,
       required final List<StrokeModel> backStrokes,
+      final String? frontText,
+      final String? backText,
       final String? frontRecognizedText,
       final String? backRecognizedText,
       required final DateTime createdAt,
@@ -550,6 +584,10 @@ abstract class _FlashcardModel implements FlashcardModel {
   List<StrokeModel> get frontStrokes;
   @override
   List<StrokeModel> get backStrokes;
+  @override
+  String? get frontText;
+  @override
+  String? get backText;
   @override
   String? get frontRecognizedText;
   @override
@@ -580,11 +618,8 @@ abstract class _FlashcardModel implements FlashcardModel {
   double get borderWidth;
   @override
   double get borderRadius;
-
-  /// Create a copy of FlashcardModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$FlashcardModelImplCopyWith<_$FlashcardModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

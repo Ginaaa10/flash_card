@@ -20,7 +20,7 @@ _$StrokeModelImpl _$$StrokeModelImplFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$$StrokeModelImplToJson(_$StrokeModelImpl instance) =>
     <String, dynamic>{
       'id': instance.id,
-      'points': instance.points.map((e) => e.toJson()).toList(),
+      'points': instance.points,
       'color': StrokeModel._colorToJson(instance.color),
       'width': instance.width,
       'timestamp': instance.timestamp.toIso8601String(),

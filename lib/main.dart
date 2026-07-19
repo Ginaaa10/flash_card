@@ -9,16 +9,29 @@ import 'shared/services/firestore_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
-  // Sign in anonymously
-  if (FirebaseAuth.instance.currentUser == null) {
-    await FirebaseAuth.instance.signInAnonymously();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase init error: $e');
   }
 
-  await FirestoreService.init();
+  try {
+    if (FirebaseAuth.instance.currentUser == null) {
+      await FirebaseAuth.instance.signInAnonymously();
+    }
+  } catch (e) {
+    debugPrint('Anonymous auth error: $e');
+  }
+
+  try {
+    await FirestoreService.init();
+  } catch (e) {
+    debugPrint('Firestore init error: $e');
+  }
+
   runApp(const ProviderScope(child: FlashCardApp()));
 }
 

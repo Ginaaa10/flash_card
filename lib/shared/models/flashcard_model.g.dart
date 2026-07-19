@@ -16,6 +16,8 @@ _$FlashcardModelImpl _$$FlashcardModelImplFromJson(Map<String, dynamic> json) =>
       backStrokes: (json['backStrokes'] as List<dynamic>)
           .map((e) => StrokeModel.fromJson(e as Map<String, dynamic>))
           .toList(),
+      frontText: json['frontText'] as String?,
+      backText: json['backText'] as String?,
       frontRecognizedText: json['frontRecognizedText'] as String?,
       backRecognizedText: json['backRecognizedText'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
@@ -42,8 +44,10 @@ Map<String, dynamic> _$$FlashcardModelImplToJson(
     <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
-      'frontStrokes': instance.frontStrokes.map((e) => e.toJson()).toList(),
-      'backStrokes': instance.backStrokes.map((e) => e.toJson()).toList(),
+      'frontStrokes': instance.frontStrokes,
+      'backStrokes': instance.backStrokes,
+      'frontText': instance.frontText,
+      'backText': instance.backText,
       'frontRecognizedText': instance.frontRecognizedText,
       'backRecognizedText': instance.backRecognizedText,
       'createdAt': instance.createdAt.toIso8601String(),

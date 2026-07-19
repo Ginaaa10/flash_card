@@ -28,12 +28,8 @@ mixin _$StrokeModel {
   double get width => throw _privateConstructorUsedError;
   DateTime get timestamp => throw _privateConstructorUsedError;
 
-  /// Serializes this StrokeModel to a JSON map.
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
-
-  /// Create a copy of StrokeModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   $StrokeModelCopyWith<StrokeModel> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -65,8 +61,6 @@ class _$StrokeModelCopyWithImpl<$Res, $Val extends StrokeModel>
   // ignore: unused_field
   final $Res Function($Val) _then;
 
-  /// Create a copy of StrokeModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -128,8 +122,6 @@ class __$$StrokeModelImplCopyWithImpl<$Res>
       _$StrokeModelImpl _value, $Res Function(_$StrokeModelImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of StrokeModel
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -218,14 +210,12 @@ class _$StrokeModelImpl implements _StrokeModel {
                 other.timestamp == timestamp));
   }
 
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   int get hashCode => Object.hash(runtimeType, id,
       const DeepCollectionEquality().hash(_points), color, width, timestamp);
 
-  /// Create a copy of StrokeModel
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$StrokeModelImplCopyWith<_$StrokeModelImpl> get copyWith =>
@@ -265,11 +255,8 @@ abstract class _StrokeModel implements StrokeModel {
   double get width;
   @override
   DateTime get timestamp;
-
-  /// Create a copy of StrokeModel
-  /// with the given fields replaced by the non-null parameter values.
   @override
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$StrokeModelImplCopyWith<_$StrokeModelImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }

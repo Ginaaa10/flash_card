@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flash_card_app/core/theme/app_theme.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
+import 'package:flash_card_app/features/flashcard/domain/providers/groups_provider.dart';
+import 'package:flash_card_app/features/settings/domain/providers/app_settings_provider.dart';
 import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
+import 'package:flash_card_app/shared/models/flashcard_model.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
+import 'package:flash_card_app/shared/services/image_upload_service.dart';
 import 'dart:typed_data';
 
 class FlashcardEditorScreen extends ConsumerStatefulWidget {
@@ -23,9 +29,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   bool _isEditingTitle = false;
   bool _isSaving = false;
   bool _isFavorite = false;
+  bool _isTextInputMode = false;
   String? _groupName;
   String? _frontBackgroundImage;
   String? _backBackgroundImage;
+  String? _frontText;
+  String? _backText;
   String _borderStyle = 'solid';
   int _borderColor = 0xFF6366F1;
   double _borderWidth = 2.0;
@@ -33,65 +42,57 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   String? _activeTool;
   String? _hoveredTool;
   final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _frontTextController = TextEditingController();
+  final TextEditingController _backTextController = TextEditingController();
   final TesseractOcrService _ocrService = TesseractOcrService();
   final GlobalKey<_WhiteboardDrawingAreaState> _frontCanvasKey = GlobalKey();
   final GlobalKey<_WhiteboardDrawingAreaState> _backCanvasKey = GlobalKey();
   String? _frontRecognizedText;
   String? _backRecognizedText;
+  bool _hasLoadedFlashcard = false;
+  final FocusNode _focusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    _loadFlashcard();
-  }
-
-  void _loadFlashcard() {
-    if (widget.flashcardId != null) {
-      final flashcard =
-          ref.read(flashcardByIdProvider(widget.flashcardId!));
-      if (flashcard != null) {
-        _titleController.text = flashcard.title;
-        _frontRecognizedText = flashcard.frontRecognizedText;
-        _backRecognizedText = flashcard.backRecognizedText;
-        _isFavorite = flashcard.isFavorite;
-        _groupName = flashcard.groupName;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _frontCanvasKey.currentState?.loadStrokes(flashcard.frontStrokes);
-            _backCanvasKey.currentState?.loadStrokes(flashcard.backStrokes);
-          }
-        });
-      } else {
-        _titleController.text = 'New Flashcard';
-        _waitForFlashcard();
-      }
-    } else {
+    if (widget.flashcardId == null) {
       _titleController.text = 'New Flashcard';
+      _hasLoadedFlashcard = true;
     }
   }
 
-  void _waitForFlashcard() {
-    if (widget.flashcardId == null) return;
-    ref.listen(flashcardByIdProvider(widget.flashcardId!), (prev, next) {
-      if (next != null && mounted) {
-        _titleController.text = next.title;
-        _frontRecognizedText = next.frontRecognizedText;
-        _backRecognizedText = next.backRecognizedText;
-        _isFavorite = next.isFavorite;
-        _groupName = next.groupName;
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _frontCanvasKey.currentState?.loadStrokes(next.frontStrokes);
-            _backCanvasKey.currentState?.loadStrokes(next.backStrokes);
-          }
-        });
+  void _loadFlashcardFromProvider(FlashcardModel flashcard) {
+    if (_hasLoadedFlashcard) return;
+    _hasLoadedFlashcard = true;
+    _titleController.text = flashcard.title;
+    _frontRecognizedText = flashcard.frontRecognizedText;
+    _backRecognizedText = flashcard.backRecognizedText;
+    _isFavorite = flashcard.isFavorite;
+    _groupName = flashcard.groupName;
+    _frontBackgroundImage = flashcard.frontBackgroundImage;
+    _backBackgroundImage = flashcard.backBackgroundImage;
+    _frontText = flashcard.frontText;
+    _backText = flashcard.backText;
+    _frontTextController.text = flashcard.frontText ?? '';
+    _backTextController.text = flashcard.backText ?? '';
+    _borderStyle = flashcard.borderStyle;
+    _borderColor = flashcard.borderColor;
+    _borderWidth = flashcard.borderWidth;
+    _borderRadius = flashcard.borderRadius;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _frontCanvasKey.currentState?.loadStrokes(flashcard.frontStrokes);
+        _backCanvasKey.currentState?.loadStrokes(flashcard.backStrokes);
       }
     });
   }
 
   @override
   void dispose() {
+    _focusNode.dispose();
     _titleController.dispose();
+    _frontTextController.dispose();
+    _backTextController.dispose();
     super.dispose();
   }
 
@@ -127,22 +128,240 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     setState(() => _isFavorite = !_isFavorite);
   }
 
+  void _showImageSettings() {
+    final side = _isFront ? 'Front' : 'Back';
+    final currentBg = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('$side Side Settings'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (currentBg != null) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    currentBg,
+                    height: 120,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () async {
+                    await ImageUploadService.deleteImage(currentBg);
+                    setState(() {
+                      if (_isFront) {
+                        _frontBackgroundImage = null;
+                      } else {
+                        _backBackgroundImage = null;
+                      }
+                    });
+                    setDialogState(() {});
+                    if (mounted) Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  label: const Text('Remove Background',
+                      style: TextStyle(color: Colors.red)),
+                ),
+                const Divider(),
+              ],
+              ListTile(
+                leading: const Icon(Icons.image),
+                title: const Text('Upload Background Image'),
+                subtitle: const Text('Pick from device'),
+                onTap: () async {
+                  final flashcardId = widget.flashcardId ?? DateTime.now().millisecondsSinceEpoch.toString();
+                  final url = await ImageUploadService.uploadImage(
+                    flashcardId: flashcardId,
+                    side: _isFront ? 'front' : 'back',
+                    type: 'bg',
+                  );
+                  if (url != null) {
+                    setState(() {
+                      if (_isFront) {
+                        _frontBackgroundImage = url;
+                      } else {
+                        _backBackgroundImage = url;
+                      }
+                    });
+                    if (mounted) Navigator.pop(context);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              Text('Border Color', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _colorOption(0xFF6366F1, 'Indigo'),
+                  _colorOption(0xFFFF6B9D, 'Pink'),
+                  _colorOption(0xFF9B5DE5, 'Purple'),
+                  _colorOption(0xFF00BBF9, 'Blue'),
+                  _colorOption(0xFF00F5D4, 'Green'),
+                  _colorOption(0xFFFFD166, 'Yellow'),
+                  _colorOption(0xFFFF9F1C, 'Orange'),
+                  _colorOption(0xFFFF6B6B, 'Red'),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  const Text('Border: '),
+                  Expanded(
+                    child: Slider(
+                      value: _borderWidth,
+                      min: 0,
+                      max: 8,
+                      divisions: 16,
+                      label: _borderWidth.toStringAsFixed(1),
+                      onChanged: (v) => setState(() => _borderWidth = v),
+                    ),
+                  ),
+                  Text('${_borderWidth.toStringAsFixed(1)}px'),
+                ],
+              ),
+              Row(
+                children: [
+                  const Text('Radius: '),
+                  Expanded(
+                    child: Slider(
+                      value: _borderRadius,
+                      min: 0,
+                      max: 40,
+                      divisions: 20,
+                      label: _borderRadius.toStringAsFixed(0),
+                      onChanged: (v) => setState(() => _borderRadius = v),
+                    ),
+                  ),
+                  Text('${_borderRadius.toStringAsFixed(0)}px'),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _colorOption(int colorValue, String name) {
+    final isSelected = _borderColor == colorValue;
+    return GestureDetector(
+      onTap: () => setState(() => _borderColor = colorValue),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(colorValue),
+              Color(colorValue).withOpacity(0.7),
+            ],
+          ),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.grey.shade300,
+            width: isSelected ? 3 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Color(colorValue).withOpacity(0.5),
+                    blurRadius: 12,
+                    spreadRadius: 2,
+                  ),
+                ]
+              : null,
+        ),
+        child: isSelected
+            ? const Icon(Icons.check, color: Colors.white, size: 18)
+            : null,
+      ),
+    );
+  }
+
+  Widget _buildAppBarIconButton({
+    required IconData icon,
+    required LinearGradient gradient,
+    required Color glowColor,
+    required bool isActive,
+    required VoidCallback onPressed,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          gradient: isActive ? gradient : null,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: isActive
+              ? [
+                  BoxShadow(
+                    color: glowColor.withOpacity(0.4),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ]
+              : null,
+        ),
+        child: Icon(
+          icon,
+          color: isActive ? Colors.white : Colors.grey,
+          size: 22,
+        ),
+      ),
+    );
+  }
+
   void _showGroupDialog() {
-    final existingGroups = ref.read(allGroupsProvider);
+    final existingGroups = ref.read(groupsProvider);
     final groupController = TextEditingController(text: _groupName ?? '');
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Flashcard Group'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                ),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.folder_open, color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Flashcard Group'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: groupController,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Enter group name',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
             if (existingGroups.isNotEmpty) ...[
@@ -154,8 +373,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                 spacing: 8,
                 runSpacing: 4,
                 children: existingGroups.map((group) {
+                  final isSelected = _groupName == group;
                   return ActionChip(
                     label: Text(group),
+                    avatar: isSelected ? const Icon(Icons.check, size: 16) : null,
+                    backgroundColor:
+                        isSelected ? AppTheme.purpleLight.withOpacity(0.15) : null,
                     onPressed: () {
                       Navigator.pop(context);
                       setState(() => _groupName = group);
@@ -183,6 +406,13 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             onPressed: () {
               final name = groupController.text.trim();
               Navigator.pop(context);
+              if (name.isNotEmpty) {
+                // Auto-add new group to groups collection
+                final currentGroups = ref.read(groupsProvider);
+                if (!currentGroups.contains(name)) {
+                  ref.read(groupsProvider.notifier).addGroup(name);
+                }
+              }
               setState(() => _groupName = name.isEmpty ? null : name);
             },
             child: const Text('Save'),
@@ -252,25 +482,61 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = screenWidth * 0.9;
     final cardHeight = cardWidth * 0.65;
+    final appBg = ref.watch(appSettingsProvider).appBackgroundImage;
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-      appBar: AppBar(
+    final flashcardById = widget.flashcardId != null
+        ? ref.watch(flashcardByIdProvider(widget.flashcardId!))
+        : null;
+
+    if (flashcardById != null && !_hasLoadedFlashcard) {
+      _loadFlashcardFromProvider(flashcardById);
+    }
+
+    return KeyboardListener(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.arrowRight) {
+          _flipCard();
+        }
+      },
+      child: Container(
+        decoration: appBg != null
+          ? BoxDecoration(
+              image: DecorationImage(
+                image: NetworkImage(appBg),
+                fit: BoxFit.cover,
+              ),
+            )
+          : const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Color(0xFFF8F9FE),
+                  Color(0xFFF0F2FF),
+                  Color(0xFFE8EDFF),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () async {
-            await _saveFlashcard();
-            if (mounted) context.go('/');
-          },
-        ),
+        appBar: AppBar(
+          backgroundColor: Colors.white.withOpacity(0.85),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+            onPressed: () async {
+              await _saveFlashcard();
+              if (mounted) context.go('/');
+            },
+          ),
         title: _isEditingTitle
             ? TextField(
                 controller: _titleController,
                 autofocus: true,
                 style: const TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w600),
+                    fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Enter title',
@@ -285,23 +551,27 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                   _titleController.text.isEmpty
                       ? 'New Flashcard'
                       : _titleController.text,
-                  style: const TextStyle(fontSize: 18),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
                 ),
               ),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: Icon(
-              _isFavorite ? Icons.star : Icons.star_border,
-              color: _isFavorite ? Colors.amber : Colors.grey,
+          _buildAppBarIconButton(
+            icon: _isFavorite ? Icons.star : Icons.star_border,
+            gradient: const LinearGradient(
+              colors: [Color(0xFFFFD166), Color(0xFFFF9F1C)],
             ),
+            glowColor: const Color(0xFFFFD166),
+            isActive: _isFavorite,
             onPressed: _toggleFavorite,
           ),
-          IconButton(
-            icon: Icon(
-              Icons.folder,
-              color: _groupName != null ? Theme.of(context).colorScheme.primary : Colors.grey,
+          _buildAppBarIconButton(
+            icon: Icons.folder,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
             ),
+            glowColor: const Color(0xFF764BA2),
+            isActive: _groupName != null,
             onPressed: _showGroupDialog,
           ),
         ],
@@ -311,7 +581,9 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           children: [
             const SizedBox(height: 12),
             _buildSideSelector(theme),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            _buildImageUploadBar(theme),
+            const SizedBox(height: 8),
             Expanded(
               child: Center(
                 child: _buildFlashcard(cardWidth, cardHeight, theme),
@@ -322,6 +594,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           ],
         ),
       ),
+    ),
+    ),
     );
   }
 
@@ -346,35 +620,211 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
         decoration: BoxDecoration(
-          color: isActive
-              ? theme.colorScheme.primary
-              : theme.colorScheme.surface,
+          gradient: isActive
+              ? const LinearGradient(
+                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                )
+              : null,
+          color: isActive ? null : Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: isActive
               ? [
+                  const BoxShadow(
+                    color: Color(0xFF764BA2),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                    offset: Offset(0, 3),
+                  ),
                   BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: const Color(0xFF667EEA).withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
           border: Border.all(
             color: isActive
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outline.withOpacity(0.3),
+                ? Colors.transparent
+                : Colors.grey.shade200,
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isActive ? Colors.white : theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isActive ? Icons.check_circle : Icons.circle_outlined,
+              size: 16,
+              color: isActive ? Colors.white : Colors.grey.shade400,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? Colors.white : Colors.grey.shade600,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildImageUploadBar(ThemeData theme) {
+    final side = _isFront ? 'Front' : 'Back';
+    final currentBg = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.white,
+            Colors.white.withOpacity(0.95),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppTheme.blueLight.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.blueLight.withOpacity(0.08),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
+              ),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.image, color: Colors.white, size: 16),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            '$side Background',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(width: 8),
+          if (currentBg != null) ...[
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(4),
+                image: DecorationImage(
+                  image: NetworkImage(currentBg),
+                  fit: BoxFit.cover,
+                ),
+                border: Border.all(
+                  color: AppTheme.greenLight,
+                  width: 2,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            GestureDetector(
+              onTap: () async {
+                await ImageUploadService.deleteImage(currentBg);
+                setState(() {
+                  if (_isFront) {
+                    _frontBackgroundImage = null;
+                  } else {
+                    _backBackgroundImage = null;
+                  }
+                });
+              },
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: AppTheme.coralLight.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Icon(Icons.close, size: 12, color: AppTheme.coralLight),
+              ),
+            ),
+          ],
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () async {
+              final flashcardId = widget.flashcardId ?? DateTime.now().millisecondsSinceEpoch.toString();
+              final url = await ImageUploadService.uploadImage(
+                flashcardId: flashcardId,
+                side: _isFront ? 'front' : 'back',
+                type: 'bg',
+              );
+              if (url != null) {
+                setState(() {
+                  if (_isFront) {
+                    _frontBackgroundImage = url;
+                  } else {
+                    _backBackgroundImage = url;
+                  }
+                });
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)],
+                ),
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF00F2FE).withOpacity(0.3),
+                    blurRadius: 6,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    currentBg != null ? Icons.swap_horiz : Icons.add_a_photo,
+                    color: Colors.white,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    currentBg != null ? 'Change' : 'Upload',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -392,12 +842,20 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     ThemeData theme,
     String? recognizedText,
   ) {
+    final bgImage = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+
     return Container(
       width: width,
       height: height,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(_borderRadius),
+        border: _borderWidth > 0
+            ? Border.all(
+                color: Color(_borderColor),
+                width: _borderWidth,
+              )
+            : null,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.15),
@@ -412,9 +870,20 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(_borderRadius),
         child: Stack(
           children: [
+            if (bgImage != null)
+              Positioned.fill(
+                child: Image.network(
+                  bgImage,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade100,
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  ),
+                ),
+              ),
             Positioned.fill(
               child: _buildDrawingArea(theme),
             ),
@@ -424,6 +893,41 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               right: 0,
               child: _buildCardHeader(theme),
             ),
+            if (!_isTextInputMode)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => setState(() => _isTextInputMode = true),
+                  child: _buildCardContentText(theme),
+                ),
+              ),
+            if (_isTextInputMode)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.white.withOpacity(0.95),
+                  padding: const EdgeInsets.fromLTRB(16, 52, 16, 16),
+                  child: TextField(
+                    controller: _isFront ? _frontTextController : _backTextController,
+                    maxLines: null,
+                    expands: true,
+                    textAlignVertical: TextAlignVertical.top,
+                    style: const TextStyle(fontSize: 16, height: 1.5),
+                    decoration: InputDecoration(
+                      hintText: 'Type your content here...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      border: InputBorder.none,
+                    ),
+                    onChanged: (value) {
+                      setState(() {
+                        if (_isFront) {
+                          _frontText = value;
+                        } else {
+                          _backText = value;
+                        }
+                      });
+                    },
+                  ),
+                ),
+              ),
             if (recognizedText != null && recognizedText.isNotEmpty)
               Positioned(
                 bottom: 0,
@@ -432,6 +936,35 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                 child: _buildRecognizedText(recognizedText, theme),
               ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCardContentText(ThemeData theme) {
+    final currentText = _isFront ? _frontText : _backText;
+    if (currentText == null || currentText.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 52, 16, 16),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.85),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            currentText,
+            style: const TextStyle(
+              fontSize: 18,
+              height: 1.6,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 15,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
@@ -572,8 +1105,21 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
+        gradient: LinearGradient(
+          colors: [
+            theme.colorScheme.surface,
+            theme.colorScheme.surface.withOpacity(0.95),
+          ],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withOpacity(0.08),
+            blurRadius: 20,
+            spreadRadius: 2,
+            offset: const Offset(0, -4),
+          ),
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
@@ -612,12 +1158,32 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             theme: theme,
           ),
           _buildToolbarButton(
+            toolId: 'text',
+            icon: Icons.keyboard,
+            label: 'Text',
+            enabled: true,
+            isActive: _isTextInputMode,
+            onTap: () {
+              setState(() => _isTextInputMode = !_isTextInputMode);
+            },
+            theme: theme,
+          ),
+          _buildToolbarButton(
             toolId: 'ocr',
             icon: Icons.text_snippet,
             label: 'OCR',
             enabled: _currentStrokes.isNotEmpty,
             isActive: _isRecognizing,
             onTap: _recognizeText,
+            theme: theme,
+          ),
+          _buildToolbarButton(
+            toolId: 'image',
+            icon: Icons.image,
+            label: 'Image',
+            enabled: true,
+            isActive: false,
+            onTap: _showImageSettings,
             theme: theme,
           ),
           _buildToolbarButton(
@@ -651,11 +1217,19 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     required ThemeData theme,
   }) {
     final isHovered = _hoveredTool == toolId;
-    final color = isActive
-        ? theme.colorScheme.primary
-        : enabled
-            ? theme.colorScheme.onSurface
-            : Colors.grey.shade400;
+
+    final toolColors = {
+      'undo': [const Color(0xFF667EEA), const Color(0xFF764BA2)],
+      'redo': [const Color(0xFF6B73FF), const Color(0xFF00D2FF)],
+      'flip': [const Color(0xFF11998E), const Color(0xFF38EF7D)],
+      'ocr': [const Color(0xFFF093FB), const Color(0xFFF5576C)],
+      'image': [const Color(0xFF4FACFE), const Color(0xFF00F2FE)],
+      'save': [const Color(0xFF43E97B), const Color(0xFF38F9D7)],
+    };
+
+    final colors = toolColors[toolId] ?? [Colors.grey, Colors.grey];
+    final baseColor = colors[0];
+    final glowColor = colors[1];
 
     return MouseRegion(
       onEnter: enabled ? (_) => setState(() => _hoveredTool = toolId) : null,
@@ -664,38 +1238,85 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
       child: GestureDetector(
         onTap: enabled ? onTap : null,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
           padding: EdgeInsets.symmetric(
-            horizontal: isActive || isHovered ? 14 : 12,
-            vertical: isActive || isHovered ? 10 : 8,
+            horizontal: isActive || isHovered ? 16 : 12,
+            vertical: isActive || isHovered ? 12 : 8,
           ),
-          decoration: (isActive || isHovered) && enabled
-              ? BoxDecoration(
-                  color: theme.colorScheme.primary
-                      .withOpacity(isActive ? 0.15 : 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                )
-              : null,
+          decoration: BoxDecoration(
+            gradient: (isActive || isHovered) && enabled
+                ? LinearGradient(
+                    colors: [
+                      baseColor.withOpacity(0.15),
+                      glowColor.withOpacity(0.08),
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(16),
+            border: (isActive || isHovered) && enabled
+                ? Border.all(
+                    color: baseColor.withOpacity(0.3),
+                    width: 1.5,
+                  )
+                : null,
+            boxShadow: (isActive || isHovered) && enabled
+                ? [
+                    BoxShadow(
+                      color: glowColor.withOpacity(0.25),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
+                      color: baseColor.withOpacity(0.1),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    ),
+                  ]
+                : null,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              AnimatedSize(
-                duration: const Duration(milliseconds: 150),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.all(isActive ? 6 : 4),
+                decoration: BoxDecoration(
+                  gradient: isActive
+                      ? LinearGradient(colors: colors)
+                      : null,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: glowColor.withOpacity(0.4),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ]
+                      : null,
+                ),
                 child: Icon(
                   icon,
-                  size: isActive ? 26 : (isHovered ? 24 : 22),
-                  color: color,
+                  size: isActive ? 24 : (isHovered ? 22 : 20),
+                  color: (isActive || isHovered) ? Colors.white : baseColor,
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                label,
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
                 style: TextStyle(
                   fontSize: isActive ? 11 : 10,
-                  fontWeight:
-                      (isActive || isHovered) ? FontWeight.w700 : FontWeight.normal,
-                  color: color,
+                  fontWeight: (isActive || isHovered)
+                      ? FontWeight.w700
+                      : FontWeight.w500,
+                  color: (isActive || isHovered)
+                      ? baseColor
+                      : Colors.grey.shade600,
                 ),
+                child: Text(label),
               ),
             ],
           ),
@@ -722,10 +1343,18 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               title: title,
               frontStrokes: frontStrokes,
               backStrokes: backStrokes,
+              frontText: _frontText,
+              backText: _backText,
               frontRecognizedText: _frontRecognizedText,
               backRecognizedText: _backRecognizedText,
               isFavorite: _isFavorite,
               groupName: _groupName,
+              frontBackgroundImage: _frontBackgroundImage,
+              backBackgroundImage: _backBackgroundImage,
+              borderStyle: _borderStyle,
+              borderColor: _borderColor,
+              borderWidth: _borderWidth,
+              borderRadius: _borderRadius,
             ),
           );
         } else {
@@ -733,6 +1362,14 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             title: title,
             frontStrokes: frontStrokes,
             backStrokes: backStrokes,
+            frontText: _frontText,
+            backText: _backText,
+            frontBackgroundImage: _frontBackgroundImage,
+            backBackgroundImage: _backBackgroundImage,
+            borderStyle: _borderStyle,
+            borderColor: _borderColor,
+            borderWidth: _borderWidth,
+            borderRadius: _borderRadius,
           );
         }
       } else {
@@ -740,6 +1377,14 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           title: title,
           frontStrokes: frontStrokes,
           backStrokes: backStrokes,
+          frontText: _frontText,
+          backText: _backText,
+          frontBackgroundImage: _frontBackgroundImage,
+          backBackgroundImage: _backBackgroundImage,
+          borderStyle: _borderStyle,
+          borderColor: _borderColor,
+          borderWidth: _borderWidth,
+          borderRadius: _borderRadius,
         );
       }
 

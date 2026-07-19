@@ -11,6 +11,8 @@ class FlashcardModel with _$FlashcardModel {
     required String title,
     required List<StrokeModel> frontStrokes,
     required List<StrokeModel> backStrokes,
+    String? frontText,
+    String? backText,
     String? frontRecognizedText,
     String? backRecognizedText,
     required DateTime createdAt,
