@@ -1083,9 +1083,33 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
   }
 
   Future<void> _createNewFlashcard() async {
-    final flashcard = await ref
-        .read(flashcardProvider.notifier)
-        .createFlashcard(title: 'New Flashcard');
+    final mode = await showDialog<String>(
+      context: context,
+      builder: (context) => const _NewFlashcardCreationDialog(),
+    );
+    if (!mounted || mode == null) return;
+
+    if (mode == 'whiteboard') {
+      final flashcard = await ref
+          .read(flashcardProvider.notifier)
+          .createFlashcard(title: 'New Flashcard');
+      if (mounted) {
+        context.push('/editor/${flashcard.id}');
+      }
+      return;
+    }
+
+    final data = await showDialog<_ManualFlashcardData>(
+      context: context,
+      builder: (context) => const _ManualFlashcardDialog(),
+    );
+    if (!mounted || data == null) return;
+
+    final flashcard = await ref.read(flashcardProvider.notifier).createFlashcard(
+          title: data.title,
+          frontText: data.frontText.isEmpty ? null : data.frontText,
+          backText: data.backText.isEmpty ? null : data.backText,
+        );
     if (mounted) {
       context.push('/editor/${flashcard.id}');
     }
@@ -1464,6 +1488,170 @@ class _AppBackgroundDialogState extends State<_AppBackgroundDialog> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Lets the user pick how the new flashcard should be created.
+/// Returns `'whiteboard'` or `'manual'`.
+class _NewFlashcardCreationDialog extends StatelessWidget {
+  const _NewFlashcardCreationDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('New Flashcard'),
+      contentPadding: const EdgeInsets.symmetric(vertical: 16),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFF4FACFE),
+              child: Icon(Icons.draw, color: Colors.white),
+            ),
+            title: const Text('Whiteboard'),
+            subtitle: const Text('Draw the front and back by hand'),
+            onTap: () => Navigator.of(context).pop('whiteboard'),
+          ),
+          ListTile(
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFF43E97B),
+              child: Icon(Icons.text_fields, color: Colors.white),
+            ),
+            title: const Text('Manual Text'),
+            subtitle: const Text('Type the front and back content'),
+            onTap: () => Navigator.of(context).pop('manual'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ManualFlashcardData {
+  final String title;
+  final String frontText;
+  final String backText;
+
+  const _ManualFlashcardData({
+    required this.title,
+    required this.frontText,
+    required this.backText,
+  });
+}
+
+/// Collects the title and the front/back text for a manually created card.
+class _ManualFlashcardDialog extends StatefulWidget {
+  const _ManualFlashcardDialog();
+
+  @override
+  State<_ManualFlashcardDialog> createState() => _ManualFlashcardDialogState();
+}
+
+class _ManualFlashcardDialogState extends State<_ManualFlashcardDialog> {
+  final _titleController = TextEditingController();
+  final _frontController = TextEditingController();
+  final _backController = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _frontController.dispose();
+    _backController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final front = _frontController.text.trim();
+    final back = _backController.text.trim();
+    if (front.isEmpty && back.isEmpty) {
+      setState(() => _error = 'Enter the front or back content');
+      return;
+    }
+    final title = _titleController.text.trim();
+    Navigator.of(context).pop(
+      _ManualFlashcardData(
+        title: title.isEmpty ? 'New Flashcard' : title,
+        frontText: front,
+        backText: back,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Manual Flashcard'),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _titleController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Title',
+                hintText: 'New Flashcard',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _frontController,
+              minLines: 2,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Front',
+                hintText: 'Front content',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _backController,
+              minLines: 2,
+              maxLines: 5,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: const InputDecoration(
+                labelText: 'Back',
+                hintText: 'Back content',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  _error!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: _submit,
+          child: const Text('Create'),
+        ),
+      ],
     );
   }
 }
