@@ -44,8 +44,8 @@ Map<String, dynamic> _$$FlashcardModelImplToJson(
     <String, dynamic>{
       'id': instance.id,
       'title': instance.title,
-      'frontStrokes': instance.frontStrokes,
-      'backStrokes': instance.backStrokes,
+      'frontStrokes': instance.frontStrokes.map((e) => e.toJson()).toList(),
+      'backStrokes': instance.backStrokes.map((e) => e.toJson()).toList(),
       'frontText': instance.frontText,
       'backText': instance.backText,
       'frontRecognizedText': instance.frontRecognizedText,

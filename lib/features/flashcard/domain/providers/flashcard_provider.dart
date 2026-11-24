@@ -41,6 +41,7 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
   }
 
   Future<FlashcardModel> createFlashcard({
+    String? id,
     required String title,
     List<StrokeModel>? frontStrokes,
     List<StrokeModel>? backStrokes,
@@ -55,7 +56,7 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
   }) async {
     final now = DateTime.now();
     final flashcard = FlashcardModel(
-      id: const Uuid().v4(),
+      id: id ?? const Uuid().v4(),
       title: title,
       frontStrokes: frontStrokes ?? [],
       backStrokes: backStrokes ?? [],

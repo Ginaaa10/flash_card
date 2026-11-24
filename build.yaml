@@ -1,0 +1,8 @@
+targets:
+  $default:
+    builders:
+      json_serializable:
+        options:
+          # Deeply serialize nested model objects (StrokeModel/PointModel) into
+          # plain maps, otherwise Firestore rejects them when saving flashcards.
+          explicit_to_json: true

@@ -527,8 +527,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
             onPressed: () async {
-              await _saveFlashcard();
-              if (mounted) context.go('/');
+              final saved = await _saveFlashcard();
+              if (saved && mounted) context.go('/');
             },
           ),
         title: _isEditingTitle
@@ -1194,10 +1194,10 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             isActive: _isSaving,
             onTap: () async {
               setState(() => _isSaving = true);
-              await _saveFlashcard();
+              final saved = await _saveFlashcard();
               if (mounted) {
                 setState(() => _isSaving = false);
-                context.go('/');
+                if (saved) context.go('/');
               }
             },
             theme: theme,
@@ -1325,7 +1325,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     );
   }
 
-  Future<void> _saveFlashcard() async {
+  Future<bool> _saveFlashcard() async {
     final notifier = ref.read(flashcardProvider.notifier);
     final frontStrokes = _frontCanvasKey.currentState?.strokes ?? [];
     final backStrokes = _backCanvasKey.currentState?.strokes ?? [];
@@ -1358,7 +1358,9 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             ),
           );
         } else {
+          // Keep the original id so we don't create a duplicate flashcard.
           await notifier.createFlashcard(
+            id: widget.flashcardId,
             title: title,
             frontStrokes: frontStrokes,
             backStrokes: backStrokes,
@@ -1396,12 +1398,14 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           ),
         );
       }
+      return true;
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Save failed: $e')),
         );
       }
+      return false;
     }
   }
 }
