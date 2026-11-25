@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:flash_card_app/shared/models/flashcard_model.dart';
@@ -18,6 +19,8 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
     _isLoading = true;
     try {
       state = await FirestoreService.getAllFlashcards();
+    } catch (e) {
+      debugPrint('loadFlashcards failed: $e');
     } finally {
       _isLoading = false;
     }
@@ -29,6 +32,17 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       state = await FirestoreService.getAllFlashcards();
     } finally {
       _isLoading = false;
+    }
+  }
+
+  /// Drops the in-memory list and fetches the flashcards of the current user.
+  /// Used after sign in / sign out, when the user id changes.
+  Future<void> reload() async {
+    state = [];
+    try {
+      await refreshFlashcards();
+    } catch (e) {
+      debugPrint('reload failed: $e');
     }
   }
 

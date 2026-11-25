@@ -5,6 +5,7 @@ import 'package:flash_card_app/features/flashcard/presentation/screens/flashcard
 import 'package:flash_card_app/features/flashcard/presentation/screens/flashcard_editor_screen.dart';
 import 'package:flash_card_app/features/flashcard/presentation/screens/quiz_screen.dart';
 import 'package:flash_card_app/features/whiteboard/presentation/screens/whiteboard_screen.dart';
+import 'package:flash_card_app/features/auth/presentation/screens/account_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -32,6 +33,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: '/quiz',
         name: 'quiz',
         builder: (context, state) => const QuizScreen(),
+      ),
+      GoRoute(
+        path: '/account',
+        name: 'account',
+        builder: (context, state) => const AccountScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

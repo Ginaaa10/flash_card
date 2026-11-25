@@ -3,26 +3,29 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_card_app/shared/models/flashcard_model.dart';
 
 class FirestoreService {
-  static CollectionReference? _flashcardsRef;
+  /// The current user id, resolved on every access so signing in or out always
+  /// points at the right user's data.
+  static String? get uid => FirebaseAuth.instance.currentUser?.uid;
 
-  static String? get _uid => FirebaseAuth.instance.currentUser?.uid;
+  static bool get isReady => uid != null;
 
-  static bool get isReady => _flashcardsRef != null && _uid != null;
-
+  /// Kept for backwards compatibility. No state is cached anymore because the
+  /// user can change after starting the app (sign in / sign out / Google).
   static Future<void> init() async {
-    final uid = _uid;
-    if (uid == null) return;
-    _flashcardsRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('flashcards');
+    if (uid == null) {
+      throw Exception('Not signed in.');
+    }
   }
 
   static CollectionReference get _ref {
-    if (_flashcardsRef == null) {
-      throw Exception('FirestoreService not initialized. Call init() first.');
+    final currentUid = uid;
+    if (currentUid == null) {
+      throw Exception('Not signed in. Sign in to sync your flashcards.');
     }
-    return _flashcardsRef!;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUid)
+        .collection('flashcards');
   }
 
   static Future<void> saveFlashcard(FlashcardModel flashcard) async {

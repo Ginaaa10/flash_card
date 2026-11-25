@@ -6,7 +6,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ImageUploadService {
-  static String get _uid => FirebaseAuth.instance.currentUser!.uid;
+  static String get _uid {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      throw StateError('Not signed in. Sign in before uploading images.');
+    }
+    return uid;
+  }
 
   static Future<String?> uploadImage({
     required String flashcardId,

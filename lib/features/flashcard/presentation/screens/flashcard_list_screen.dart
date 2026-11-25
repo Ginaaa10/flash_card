@@ -11,6 +11,7 @@ import 'package:flash_card_app/shared/models/flashcard_model.dart';
 import 'package:flash_card_app/shared/services/data_export_service.dart';
 import 'package:flash_card_app/shared/services/image_upload_service.dart';
 import 'package:flash_card_app/features/flashcard/presentation/screens/ai_connect_dialog.dart';
+import 'package:flash_card_app/features/auth/domain/providers/auth_provider.dart';
 
 class FlashcardListScreen extends ConsumerStatefulWidget {
   const FlashcardListScreen({super.key});
@@ -154,6 +155,7 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
     }
 
     return [
+      _buildAccountAction(),
       _buildActionIconButton(
         icon: Icons.search,
         gradient: const LinearGradient(colors: [Color(0xFF4FACFE), Color(0xFF00F2FE)]),
@@ -179,6 +181,20 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
         ),
         onSelected: (value) => _handleMenuAction(value, theme),
         itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'account',
+            child: ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF43E97B), Color(0xFF38F9D7)]),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.person, color: Colors.white, size: 18),
+              ),
+              title: const Text('Account'),
+            ),
+          ),
           PopupMenuItem(
             value: 'ai_connect',
             child: ListTile(
@@ -281,8 +297,32 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
     );
   }
 
+  Widget _buildAccountAction() {
+    final user = ref.watch(authStateProvider).valueOrNull;
+    final signedIn = user != null && !user.isAnonymous;
+    return Semantics(
+      button: true,
+      label: 'Account',
+      onTap: () => context.push('/account'),
+      child: _buildActionIconButton(
+        icon: signedIn ? Icons.verified_user : Icons.person,
+        gradient: LinearGradient(
+          colors: signedIn
+              ? const [Color(0xFF43E97B), Color(0xFF38F9D7)]
+              : const [Color(0xFF94A3B8), Color(0xFF64748B)],
+        ),
+        glowColor:
+            signedIn ? const Color(0xFF38F9D7) : const Color(0xFF64748B),
+        onPressed: () => context.push('/account'),
+      ),
+    );
+  }
+
   void _handleMenuAction(String value, ThemeData theme) {
     switch (value) {
+      case 'account':
+        context.push('/account');
+        break;
       case 'ai_connect':
         _showAiConnectDialog();
         break;

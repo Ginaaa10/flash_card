@@ -19,8 +19,23 @@ void main() async {
   }
 
   try {
-    if (FirebaseAuth.instance.currentUser == null) {
-      await FirebaseAuth.instance.signInAnonymously();
+    final auth = FirebaseAuth.instance;
+    if (auth.currentUser == null) {
+      // On web the saved session is restored asynchronously. Wait for that
+      // restore before creating a new anonymous account, otherwise every load
+      // can create a fresh account and the user sees a different flashcard set.
+      User? restored;
+      try {
+        restored = await auth.authStateChanges().first.timeout(
+          const Duration(seconds: 8),
+          onTimeout: () => auth.currentUser,
+        );
+      } catch (_) {
+        restored = auth.currentUser;
+      }
+      if (restored == null) {
+        await auth.signInAnonymously();
+      }
     }
   } catch (e) {
     debugPrint('Anonymous auth error: $e');
