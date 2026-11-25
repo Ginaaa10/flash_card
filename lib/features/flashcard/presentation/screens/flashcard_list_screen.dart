@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flash_card_app/core/theme/app_theme.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/groups_provider.dart';
@@ -298,7 +299,10 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
   }
 
   Widget _buildAccountAction() {
-    final user = ref.watch(authStateProvider).valueOrNull;
+    // Rebuild when the account changes, but read the live user so linking a
+    // provider (same uid) updates the icon immediately.
+    ref.watch(authStateProvider);
+    final user = FirebaseAuth.instance.currentUser;
     final signedIn = user != null && !user.isAnonymous;
     return Semantics(
       button: true,

@@ -2,9 +2,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-/// Streams the current Firebase user so the UI can react to sign in / sign out.
+/// Streams the current Firebase user so the UI can react to sign in / sign out
+/// and to account linking (which keeps the same uid and therefore does not
+/// trigger [FirebaseAuth.authStateChanges]).
 final authStateProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
+  return FirebaseAuth.instance.userChanges();
 });
 
 /// A user-facing authentication error with a readable message.

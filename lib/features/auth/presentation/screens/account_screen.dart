@@ -122,8 +122,10 @@ class _AccountScreenState extends ConsumerState<AccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authStateProvider);
-    final user = authState.valueOrNull ?? FirebaseAuth.instance.currentUser;
+    // Watch only to rebuild when the signed-in user changes; always read the
+    // live value so account linking is reflected immediately.
+    ref.watch(authStateProvider);
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       appBar: AppBar(
