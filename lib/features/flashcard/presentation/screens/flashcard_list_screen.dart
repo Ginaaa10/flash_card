@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flash_card_app/core/theme/app_theme.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/groups_provider.dart';
@@ -821,6 +822,7 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
 
   Widget _buildGroupsTab(ThemeData theme) {
     final groups = ref.watch(groupsProvider);
+    final groupsError = ref.watch(groupsErrorProvider);
     final flashcards = ref.watch(filteredFlashcardProvider);
 
     return Column(
@@ -843,6 +845,41 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
             ),
           ),
         ),
+        if (groupsError != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 20,
+                    color: theme.colorScheme.onErrorContainer,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      groupsError,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: theme.colorScheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () =>
+                        ref.read(groupsProvider.notifier).reload(),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 8),
         if (groups.isEmpty)
           Expanded(
@@ -983,10 +1020,8 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
             ),
           ),
           onSubmitted: (value) {
-            if (value.trim().isNotEmpty) {
-              ref.read(groupsProvider.notifier).addGroup(value.trim());
-              Navigator.pop(context);
-            }
+            Navigator.pop(context);
+            _createGroup(value);
           },
         ),
         actions: [
@@ -996,10 +1031,9 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
           ),
           ElevatedButton(
             onPressed: () {
-              if (controller.text.trim().isNotEmpty) {
-                ref.read(groupsProvider.notifier).addGroup(controller.text.trim());
-                Navigator.pop(context);
-              }
+              final name = controller.text;
+              Navigator.pop(context);
+              _createGroup(name);
             },
             style: ElevatedButton.styleFrom(
               shape: RoundedRectangleBorder(
@@ -1011,6 +1045,26 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _createGroup(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    try {
+      await ref.read(groupsProvider.notifier).addGroup(trimmed);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Group "$trimmed" created'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(describeGroupError(e, 'create group'))),
+      );
+    }
   }
 
   void _confirmDeleteGroup(String group, ThemeData theme) {
@@ -1026,9 +1080,16 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
             child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () {
-              ref.read(groupsProvider.notifier).removeGroup(group);
+            onPressed: () async {
               Navigator.pop(context);
+              try {
+                await ref.read(groupsProvider.notifier).removeGroup(group);
+              } catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(describeGroupError(e, 'delete group'))),
+                );
+              }
             },
             child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),

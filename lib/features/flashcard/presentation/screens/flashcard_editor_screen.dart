@@ -190,6 +190,14 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                       }
                     });
                     if (mounted) Navigator.pop(context);
+                  } else if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ImageUploadService.lastError ?? 'Upload failed',
+                        ),
+                      ),
+                    );
                   }
                 },
               ),
@@ -786,6 +794,14 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                     _backBackgroundImage = url;
                   }
                 });
+              } else if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ImageUploadService.lastError ?? 'Upload failed',
+                    ),
+                  ),
+                );
               }
             },
             child: Container(

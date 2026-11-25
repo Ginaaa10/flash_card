@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ImageUploadService {
+  /// Why the last upload failed, for showing a message to the user.
+  static String? lastError;
+
   static String get _uid {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) {
@@ -19,6 +23,7 @@ class ImageUploadService {
     required String side,
     required String type,
   }) async {
+    lastError = null;
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.image,
@@ -51,6 +56,9 @@ class ImageUploadService {
     } catch (e, stack) {
       debugPrint('Image upload error: $e');
       debugPrint('Stack: $stack');
+      lastError = e is FirebaseException && e.code == 'permission-denied'
+          ? 'Permission denied. Allow the images collection in your Firestore rules.'
+          : 'Upload failed: $e';
       return null;
     }
   }
