@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flash_card_app/shared/models/flashcard_face_model.dart';
 import 'package:flash_card_app/shared/models/flashcard_model.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/services/firestore_service.dart';
@@ -63,6 +64,7 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
     String? backText,
     String? frontBackgroundImage,
     String? backBackgroundImage,
+    List<FlashcardFace>? extraFaces,
     String borderStyle = 'solid',
     int borderColor = 0xFF6366F1,
     double borderWidth = 2.0,
@@ -82,6 +84,7 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       reviewCount: 0,
       frontBackgroundImage: frontBackgroundImage,
       backBackgroundImage: backBackgroundImage,
+      extraFaces: extraFaces ?? [],
       borderStyle: borderStyle,
       borderColor: borderColor,
       borderWidth: borderWidth,
@@ -144,14 +147,7 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       return;
     }
     final lowerQuery = query.toLowerCase();
-    state = state.where((fc) {
-      return fc.title.toLowerCase().contains(lowerQuery) ||
-          (fc.frontRecognizedText?.toLowerCase().contains(lowerQuery) ??
-              false) ||
-          (fc.backRecognizedText?.toLowerCase().contains(lowerQuery) ??
-              false) ||
-          fc.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
-    }).toList();
+    state = state.where((fc) => matchesQuery(fc, lowerQuery)).toList();
   }
 
   Future<void> incrementReviewCount(String id) async {
@@ -216,6 +212,29 @@ final flashcardSearchProvider = StateProvider<String>((ref) => '');
 
 final flashcardGroupFilterProvider = StateProvider<String?>((ref) => null);
 
+/// Whether [flashcard] contains [lowerQuery] in any text the user can search,
+/// including the text of extra sides.
+bool matchesQuery(FlashcardModel flashcard, String lowerQuery) {
+  bool hasText(String? value) =>
+      value != null && value.toLowerCase().contains(lowerQuery);
+
+  if (flashcard.title.toLowerCase().contains(lowerQuery)) return true;
+  if (hasText(flashcard.frontText) ||
+      hasText(flashcard.backText) ||
+      hasText(flashcard.frontRecognizedText) ||
+      hasText(flashcard.backRecognizedText)) {
+    return true;
+  }
+  for (final face in flashcard.extraFaces) {
+    if (hasText(face.name) ||
+        hasText(face.text) ||
+        hasText(face.recognizedText)) {
+      return true;
+    }
+  }
+  return flashcard.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
+}
+
 final filteredFlashcardProvider = Provider<List<FlashcardModel>>((ref) {
   final flashcards = ref.watch(flashcardProvider);
   final searchQuery = ref.watch(flashcardSearchProvider);
@@ -230,12 +249,7 @@ final filteredFlashcardProvider = Provider<List<FlashcardModel>>((ref) {
   if (searchQuery.isEmpty) return result;
 
   final lowerQuery = searchQuery.toLowerCase();
-  return result.where((fc) {
-    return fc.title.toLowerCase().contains(lowerQuery) ||
-        (fc.frontRecognizedText?.toLowerCase().contains(lowerQuery) ?? false) ||
-        (fc.backRecognizedText?.toLowerCase().contains(lowerQuery) ?? false) ||
-        fc.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
-  }).toList();
+  return result.where((fc) => matchesQuery(fc, lowerQuery)).toList();
 });
 
 final favoriteFlashcardProvider = Provider<List<FlashcardModel>>((ref) {

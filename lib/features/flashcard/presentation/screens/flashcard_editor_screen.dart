@@ -7,10 +7,12 @@ import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_pro
 import 'package:flash_card_app/features/flashcard/domain/providers/groups_provider.dart';
 import 'package:flash_card_app/features/settings/domain/providers/app_settings_provider.dart';
 import 'package:flash_card_app/features/recognition/domain/services/tesseract_ocr_service.dart';
+import 'package:flash_card_app/shared/models/flashcard_face_model.dart';
 import 'package:flash_card_app/shared/models/flashcard_model.dart';
 import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'package:flash_card_app/shared/services/image_upload_service.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:typed_data';
 
 class FlashcardEditorScreen extends ConsumerStatefulWidget {
@@ -24,17 +26,12 @@ class FlashcardEditorScreen extends ConsumerStatefulWidget {
 }
 
 class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
-  bool _isFront = true;
   bool _isRecognizing = false;
   bool _isEditingTitle = false;
   bool _isSaving = false;
   bool _isFavorite = false;
   bool _isTextInputMode = false;
   String? _groupName;
-  String? _frontBackgroundImage;
-  String? _backBackgroundImage;
-  String? _frontText;
-  String? _backText;
   String _borderStyle = 'solid';
   int _borderColor = 0xFF6366F1;
   double _borderWidth = 2.0;
@@ -42,19 +39,42 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   String? _activeTool;
   String? _hoveredTool;
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _frontTextController = TextEditingController();
-  final TextEditingController _backTextController = TextEditingController();
   final TesseractOcrService _ocrService = TesseractOcrService();
-  final GlobalKey<_WhiteboardDrawingAreaState> _frontCanvasKey = GlobalKey();
-  final GlobalKey<_WhiteboardDrawingAreaState> _backCanvasKey = GlobalKey();
-  String? _frontRecognizedText;
-  String? _backRecognizedText;
+
+  /// Front is index 0, Back is index 1, extra sides follow.
+  late List<_FaceState> _faces;
+  int _activeFaceIndex = 0;
+
   bool _hasLoadedFlashcard = false;
   final FocusNode _focusNode = FocusNode();
+
+  _FaceState get _currentFace => _faces[_activeFaceIndex];
+
+  static _FaceState _newFace(
+    String id,
+    String name, {
+    List<StrokeModel> initialStrokes = const [],
+    String? text,
+    String? recognizedText,
+    String? backgroundImage,
+  }) {
+    return _FaceState(
+      id: id,
+      name: name,
+      initialStrokes: initialStrokes,
+      text: text,
+      recognizedText: recognizedText,
+      backgroundImage: backgroundImage,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
+    _faces = [
+      _newFace('front', 'Front'),
+      _newFace('back', 'Back'),
+    ];
     if (widget.flashcardId == null) {
       _titleController.text = 'New Flashcard';
       _hasLoadedFlashcard = true;
@@ -65,24 +85,45 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     if (_hasLoadedFlashcard) return;
     _hasLoadedFlashcard = true;
     _titleController.text = flashcard.title;
-    _frontRecognizedText = flashcard.frontRecognizedText;
-    _backRecognizedText = flashcard.backRecognizedText;
     _isFavorite = flashcard.isFavorite;
     _groupName = flashcard.groupName;
-    _frontBackgroundImage = flashcard.frontBackgroundImage;
-    _backBackgroundImage = flashcard.backBackgroundImage;
-    _frontText = flashcard.frontText;
-    _backText = flashcard.backText;
-    _frontTextController.text = flashcard.frontText ?? '';
-    _backTextController.text = flashcard.backText ?? '';
     _borderStyle = flashcard.borderStyle;
     _borderColor = flashcard.borderColor;
     _borderWidth = flashcard.borderWidth;
     _borderRadius = flashcard.borderRadius;
+
+    final oldFaces = _faces;
+    _faces = [
+      _newFace(
+        'front',
+        'Front',
+        initialStrokes: flashcard.frontStrokes,
+        text: flashcard.frontText,
+        recognizedText: flashcard.frontRecognizedText,
+        backgroundImage: flashcard.frontBackgroundImage,
+      ),
+      _newFace(
+        'back',
+        'Back',
+        initialStrokes: flashcard.backStrokes,
+        text: flashcard.backText,
+        recognizedText: flashcard.backRecognizedText,
+        backgroundImage: flashcard.backBackgroundImage,
+      ),
+      for (final face in flashcard.extraFaces)
+        _newFace(
+          face.id,
+          face.name,
+          initialStrokes: face.strokes,
+          text: face.text,
+          recognizedText: face.recognizedText,
+          backgroundImage: face.backgroundImage,
+        ),
+    ];
+    _activeFaceIndex = 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _frontCanvasKey.currentState?.loadStrokes(flashcard.frontStrokes);
-        _backCanvasKey.currentState?.loadStrokes(flashcard.backStrokes);
+      for (final face in oldFaces) {
+        face.dispose();
       }
     });
   }
@@ -91,17 +132,23 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   void dispose() {
     _focusNode.dispose();
     _titleController.dispose();
-    _frontTextController.dispose();
-    _backTextController.dispose();
+    for (final face in _faces) {
+      face.dispose();
+    }
     super.dispose();
   }
 
+  /// Cycles through every side. With only Front and Back this behaves like the
+  /// original flip button; with extra sides it walks through all of them.
   void _flipCard() {
-    setState(() => _isFront = !_isFront);
+    if (_faces.length < 2) return;
+    setState(() {
+      _activeFaceIndex = (_activeFaceIndex + 1) % _faces.length;
+    });
   }
 
   _WhiteboardDrawingAreaState? get _currentCanvas =>
-      _isFront ? _frontCanvasKey.currentState : _backCanvasKey.currentState;
+      _currentFace.canvasKey.currentState;
 
   void _undo() {
     _currentCanvas?.undo();
@@ -116,11 +163,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   void _clearCurrent() {
     _currentCanvas?.clear();
     setState(() {
-      if (_isFront) {
-        _frontRecognizedText = null;
-      } else {
-        _backRecognizedText = null;
-      }
+      _currentFace.recognizedText = null;
     });
   }
 
@@ -129,8 +172,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 
   void _showImageSettings() {
-    final side = _isFront ? 'Front' : 'Back';
-    final currentBg = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+    final side = _currentFace.name;
+    final currentBg = _currentFace.backgroundImage;
 
     showDialog(
       context: context,
@@ -155,11 +198,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                   onPressed: () async {
                     await ImageUploadService.deleteImage(currentBg);
                     setState(() {
-                      if (_isFront) {
-                        _frontBackgroundImage = null;
-                      } else {
-                        _backBackgroundImage = null;
-                      }
+                      _currentFace.backgroundImage = null;
                     });
                     setDialogState(() {});
                     if (mounted) Navigator.pop(context);
@@ -178,16 +217,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                   final flashcardId = widget.flashcardId ?? DateTime.now().millisecondsSinceEpoch.toString();
                   final url = await ImageUploadService.uploadImage(
                     flashcardId: flashcardId,
-                    side: _isFront ? 'front' : 'back',
+                    side: _currentFace.id,
                     type: 'bg',
                   );
                   if (url != null) {
                     setState(() {
-                      if (_isFront) {
-                        _frontBackgroundImage = url;
-                      } else {
-                        _backBackgroundImage = url;
-                      }
+                      _currentFace.backgroundImage = url;
                     });
                     if (mounted) Navigator.pop(context);
                   } else if (mounted) {
@@ -450,11 +485,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
       final result = await _ocrService.recognizeImage(imageBytes);
       if (mounted && result != null && result.isNotEmpty) {
         setState(() {
-          if (_isFront) {
-            _frontRecognizedText = result;
-          } else {
-            _backRecognizedText = result;
-          }
+          _currentFace.recognizedText = result;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -608,29 +639,137 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 
   Widget _buildSideSelector(ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildSideButton('Front', _isFront, theme, () {
-          if (!_isFront) _flipCard();
-        }),
-        const SizedBox(width: 12),
-        _buildSideButton('Back', !_isFront, theme, () {
-          if (_isFront) _flipCard();
-        }),
-      ],
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          for (var index = 0; index < _faces.length; index++) ...[
+            _buildSideButton(
+              label: _faces[index].name,
+              isActive: index == _activeFaceIndex,
+              theme: theme,
+              onTap: () => setState(() {
+                _activeFaceIndex = index;
+                _isTextInputMode = false;
+              }),
+              onRemove: index >= 2 ? () => _removeFace(index) : null,
+            ),
+            const SizedBox(width: 10),
+          ],
+          _buildAddSideButton(theme),
+        ],
+      ),
     );
   }
 
-  Widget _buildSideButton(
-      String label, bool isActive, ThemeData theme, VoidCallback onTap) {
+  Widget _buildAddSideButton(ThemeData theme) {
+    return InkWell(
+      onTap: _addFace,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.primary.withOpacity(0.35),
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, size: 16, color: theme.colorScheme.primary),
+            const SizedBox(width: 4),
+            Text(
+              'Add side',
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _addFace() {
+    final name = 'Side ${_faces.length + 1}';
+    final face = _newFace(const Uuid().v4(), name);
+    setState(() {
+      _faces.add(face);
+      _activeFaceIndex = _faces.length - 1;
+      _isTextInputMode = false;
+    });
+  }
+
+  Future<void> _removeFace(int index) async {
+    if (index < 2) return;
+    final face = _faces[index];
+    final hasContent = (face.canvasKey.currentState?.strokes.isNotEmpty ??
+            false) ||
+        face.textController.text.trim().isNotEmpty ||
+        face.backgroundImage != null;
+
+    if (hasContent) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Delete ${face.name}?'),
+          content: Text(
+            'The content on ${face.name} will be removed. '
+            'Front and Back are not affected.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+    }
+
+    setState(() {
+      _faces.removeAt(index);
+      if (_activeFaceIndex >= _faces.length) {
+        _activeFaceIndex = _faces.length - 1;
+      } else if (_activeFaceIndex > index) {
+        _activeFaceIndex--;
+      }
+    });
+    // Dispose after the frame so the removed face's widgets are detached first.
+    WidgetsBinding.instance.addPostFrameCallback((_) => face.dispose());
+  }
+
+  Widget _buildSideButton({
+    required String label,
+    required bool isActive,
+    required ThemeData theme,
+    required VoidCallback onTap,
+    VoidCallback? onRemove,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+        padding: EdgeInsets.only(
+          left: 18,
+          right: onRemove != null ? 10 : 18,
+          top: 12,
+          bottom: 12,
+        ),
         decoration: BoxDecoration(
           gradient: isActive
               ? const LinearGradient(
@@ -683,6 +822,21 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                 fontSize: 14,
               ),
             ),
+            if (onRemove != null) ...[
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: onRemove,
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: const EdgeInsets.all(2),
+                  child: Icon(
+                    Icons.close,
+                    size: 14,
+                    color: isActive ? Colors.white70 : Colors.grey.shade400,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -690,8 +844,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 
   Widget _buildImageUploadBar(ThemeData theme) {
-    final side = _isFront ? 'Front' : 'Back';
-    final currentBg = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+    final side = _currentFace.name;
+    final currentBg = _currentFace.backgroundImage;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
@@ -760,11 +914,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               onTap: () async {
                 await ImageUploadService.deleteImage(currentBg);
                 setState(() {
-                  if (_isFront) {
-                    _frontBackgroundImage = null;
-                  } else {
-                    _backBackgroundImage = null;
-                  }
+                  _currentFace.backgroundImage = null;
                 });
               },
               child: Container(
@@ -783,16 +933,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               final flashcardId = widget.flashcardId ?? DateTime.now().millisecondsSinceEpoch.toString();
               final url = await ImageUploadService.uploadImage(
                 flashcardId: flashcardId,
-                side: _isFront ? 'front' : 'back',
+                side: _currentFace.id,
                 type: 'bg',
               );
               if (url != null) {
                 setState(() {
-                  if (_isFront) {
-                    _frontBackgroundImage = url;
-                  } else {
-                    _backBackgroundImage = url;
-                  }
+                  _currentFace.backgroundImage = url;
                 });
               } else if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -846,8 +992,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 
   Widget _buildFlashcard(double width, double height, ThemeData theme) {
-    final recognizedText =
-        _isFront ? _frontRecognizedText : _backRecognizedText;
+    final recognizedText = _currentFace.recognizedText;
 
     return _buildCardContent(width, height, theme, recognizedText);
   }
@@ -858,7 +1003,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     ThemeData theme,
     String? recognizedText,
   ) {
-    final bgImage = _isFront ? _frontBackgroundImage : _backBackgroundImage;
+    final bgImage = _currentFace.backgroundImage;
 
     return Container(
       width: width,
@@ -922,7 +1067,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                   color: Colors.white.withOpacity(0.95),
                   padding: const EdgeInsets.fromLTRB(16, 52, 16, 16),
                   child: TextField(
-                    controller: _isFront ? _frontTextController : _backTextController,
+                    controller: _currentFace.textController,
                     maxLines: null,
                     expands: true,
                     textAlignVertical: TextAlignVertical.top,
@@ -932,15 +1077,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                       hintStyle: TextStyle(color: Colors.grey.shade400),
                       border: InputBorder.none,
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        if (_isFront) {
-                          _frontText = value;
-                        } else {
-                          _backText = value;
-                        }
-                      });
-                    },
+                    onChanged: (_) => setState(() {}),
                   ),
                 ),
               ),
@@ -958,8 +1095,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 
   Widget _buildCardContentText(ThemeData theme) {
-    final currentText = _isFront ? _frontText : _backText;
-    if (currentText == null || currentText.isEmpty) return const SizedBox.shrink();
+    final currentText = _currentFace.textController.text;
+    if (currentText.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 52, 16, 16),
       child: Center(
@@ -1070,20 +1207,16 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     return Container(
       color: Colors.white,
       child: IndexedStack(
-        index: _isFront ? 0 : 1,
+        index: _activeFaceIndex,
         children: [
-          _WhiteboardDrawingArea(
-            key: _frontCanvasKey,
-            onStateChanged: () {
-              if (mounted) setState(() {});
-            },
-          ),
-          _WhiteboardDrawingArea(
-            key: _backCanvasKey,
-            onStateChanged: () {
-              if (mounted) setState(() {});
-            },
-          ),
+          for (final face in _faces)
+            _WhiteboardDrawingArea(
+              key: face.canvasKey,
+              initialStrokes: face.initialStrokes,
+              onStateChanged: () {
+                if (mounted) setState(() {});
+              },
+            ),
         ],
       ),
     );
@@ -1341,10 +1474,33 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     );
   }
 
+  String? _faceText(_FaceState face) {
+    final text = face.textController.text.trim();
+    return text.isEmpty ? null : text;
+  }
+
+  /// The extra sides (index 2 and up) in the shape stored on the model.
+  List<FlashcardFace> _buildExtraFaces() {
+    return [
+      for (var index = 2; index < _faces.length; index++)
+        FlashcardFace(
+          id: _faces[index].id,
+          name: _faces[index].name,
+          strokes: _faces[index].canvasKey.currentState?.strokes ?? [],
+          text: _faceText(_faces[index]),
+          recognizedText: _faces[index].recognizedText,
+          backgroundImage: _faces[index].backgroundImage,
+        ),
+    ];
+  }
+
   Future<bool> _saveFlashcard() async {
     final notifier = ref.read(flashcardProvider.notifier);
-    final frontStrokes = _frontCanvasKey.currentState?.strokes ?? [];
-    final backStrokes = _backCanvasKey.currentState?.strokes ?? [];
+    final front = _faces[0];
+    final back = _faces[1];
+    final frontStrokes = front.canvasKey.currentState?.strokes ?? [];
+    final backStrokes = back.canvasKey.currentState?.strokes ?? [];
+    final extraFaces = _buildExtraFaces();
     final title = _titleController.text.isEmpty
         ? 'New Flashcard'
         : _titleController.text;
@@ -1359,14 +1515,15 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               title: title,
               frontStrokes: frontStrokes,
               backStrokes: backStrokes,
-              frontText: _frontText,
-              backText: _backText,
-              frontRecognizedText: _frontRecognizedText,
-              backRecognizedText: _backRecognizedText,
+              frontText: _faceText(front),
+              backText: _faceText(back),
+              frontRecognizedText: front.recognizedText,
+              backRecognizedText: back.recognizedText,
+              extraFaces: extraFaces,
               isFavorite: _isFavorite,
               groupName: _groupName,
-              frontBackgroundImage: _frontBackgroundImage,
-              backBackgroundImage: _backBackgroundImage,
+              frontBackgroundImage: front.backgroundImage,
+              backBackgroundImage: back.backgroundImage,
               borderStyle: _borderStyle,
               borderColor: _borderColor,
               borderWidth: _borderWidth,
@@ -1380,10 +1537,11 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             title: title,
             frontStrokes: frontStrokes,
             backStrokes: backStrokes,
-            frontText: _frontText,
-            backText: _backText,
-            frontBackgroundImage: _frontBackgroundImage,
-            backBackgroundImage: _backBackgroundImage,
+            frontText: _faceText(front),
+            backText: _faceText(back),
+            frontBackgroundImage: front.backgroundImage,
+            backBackgroundImage: back.backgroundImage,
+            extraFaces: extraFaces,
             borderStyle: _borderStyle,
             borderColor: _borderColor,
             borderWidth: _borderWidth,
@@ -1395,10 +1553,11 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           title: title,
           frontStrokes: frontStrokes,
           backStrokes: backStrokes,
-          frontText: _frontText,
-          backText: _backText,
-          frontBackgroundImage: _frontBackgroundImage,
-          backBackgroundImage: _backBackgroundImage,
+          frontText: _faceText(front),
+          backText: _faceText(back),
+          frontBackgroundImage: front.backgroundImage,
+          backBackgroundImage: back.backgroundImage,
+          extraFaces: extraFaces,
           borderStyle: _borderStyle,
           borderColor: _borderColor,
           borderWidth: _borderWidth,
@@ -1426,10 +1585,43 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
   }
 }
 
+/// Mutable editor state for a single side of the flashcard.
+class _FaceState {
+  _FaceState({
+    required this.id,
+    required this.name,
+    List<StrokeModel> initialStrokes = const [],
+    String? text,
+    this.recognizedText,
+    this.backgroundImage,
+  })  : initialStrokes = List.unmodifiable(initialStrokes),
+        textController = TextEditingController(text: text ?? '');
+
+  final String id;
+  final String name;
+
+  /// Strokes the side starts with; only used the first time it is built.
+  final List<StrokeModel> initialStrokes;
+  final GlobalKey<_WhiteboardDrawingAreaState> canvasKey = GlobalKey();
+  final TextEditingController textController;
+
+  String? recognizedText;
+  String? backgroundImage;
+
+  void dispose() {
+    textController.dispose();
+  }
+}
+
 class _WhiteboardDrawingArea extends StatefulWidget {
   final VoidCallback? onStateChanged;
+  final List<StrokeModel> initialStrokes;
 
-  const _WhiteboardDrawingArea({super.key, this.onStateChanged});
+  const _WhiteboardDrawingArea({
+    super.key,
+    this.onStateChanged,
+    this.initialStrokes = const [],
+  });
 
   @override
   State<_WhiteboardDrawingArea> createState() =>
@@ -1446,14 +1638,10 @@ class _WhiteboardDrawingAreaState extends State<_WhiteboardDrawingArea> {
   List<StrokeModel> get strokes => List.unmodifiable(_strokes);
   bool get canRedo => _redoStack.isNotEmpty;
 
-  void loadStrokes(List<StrokeModel> strokes) {
-    setState(() {
-      _strokes
-        ..clear()
-        ..addAll(strokes);
-      _redoStack.clear();
-    });
-    widget.onStateChanged?.call();
+  @override
+  void initState() {
+    super.initState();
+    _strokes.addAll(widget.initialStrokes);
   }
 
   void undo() {

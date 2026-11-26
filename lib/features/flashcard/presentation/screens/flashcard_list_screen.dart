@@ -4,16 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart' show FirebaseException;
 import 'package:flash_card_app/core/theme/app_theme.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/flashcard_provider.dart';
 import 'package:flash_card_app/features/flashcard/domain/providers/groups_provider.dart';
 import 'package:flash_card_app/features/settings/domain/providers/app_settings_provider.dart';
+import 'package:flash_card_app/shared/models/flashcard_face_model.dart';
 import 'package:flash_card_app/shared/models/flashcard_model.dart';
 import 'package:flash_card_app/shared/services/data_export_service.dart';
 import 'package:flash_card_app/shared/services/image_upload_service.dart';
 import 'package:flash_card_app/features/flashcard/presentation/screens/ai_connect_dialog.dart';
 import 'package:flash_card_app/features/auth/domain/providers/auth_provider.dart';
+import 'package:uuid/uuid.dart';
 
 class FlashcardListScreen extends ConsumerStatefulWidget {
   const FlashcardListScreen({super.key});
@@ -677,6 +678,25 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
                           ),
                         ),
                       ),
+                    if (flashcard.extraFaces.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          color:
+                              theme.colorScheme.primary.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${flashcard.faceCount} sides',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
                     if (flashcard.reviewCount > 0)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -1214,6 +1234,14 @@ class _FlashcardListScreenState extends ConsumerState<FlashcardListScreen>
           title: data.title,
           frontText: data.frontText.isEmpty ? null : data.frontText,
           backText: data.backText.isEmpty ? null : data.backText,
+          extraFaces: [
+            for (var index = 0; index < data.extraTexts.length; index++)
+              FlashcardFace(
+                id: const Uuid().v4(),
+                name: 'Side ${index + 3}',
+                text: data.extraTexts[index],
+              ),
+          ],
         );
     if (mounted) {
       context.push('/editor/${flashcard.id}');
@@ -1644,11 +1672,13 @@ class _ManualFlashcardData {
   final String title;
   final String frontText;
   final String backText;
+  final List<String> extraTexts;
 
   const _ManualFlashcardData({
     required this.title,
     required this.frontText,
     required this.backText,
+    this.extraTexts = const [],
   });
 }
 
@@ -1664,6 +1694,7 @@ class _ManualFlashcardDialogState extends State<_ManualFlashcardDialog> {
   final _titleController = TextEditingController();
   final _frontController = TextEditingController();
   final _backController = TextEditingController();
+  final List<TextEditingController> _extraControllers = [];
   String? _error;
 
   @override
@@ -1671,13 +1702,30 @@ class _ManualFlashcardDialogState extends State<_ManualFlashcardDialog> {
     _titleController.dispose();
     _frontController.dispose();
     _backController.dispose();
+    for (final controller in _extraControllers) {
+      controller.dispose();
+    }
     super.dispose();
+  }
+
+  void _addExtraSide() {
+    setState(() => _extraControllers.add(TextEditingController()));
+  }
+
+  void _removeExtraSide(int index) {
+    setState(() {
+      _extraControllers.removeAt(index).dispose();
+    });
   }
 
   void _submit() {
     final front = _frontController.text.trim();
     final back = _backController.text.trim();
-    if (front.isEmpty && back.isEmpty) {
+    final extraTexts = _extraControllers
+        .map((controller) => controller.text.trim())
+        .where((text) => text.isNotEmpty)
+        .toList();
+    if (front.isEmpty && back.isEmpty && extraTexts.isEmpty) {
       setState(() => _error = 'Enter the front or back content');
       return;
     }
@@ -1687,6 +1735,7 @@ class _ManualFlashcardDialogState extends State<_ManualFlashcardDialog> {
         title: title.isEmpty ? 'New Flashcard' : title,
         frontText: front,
         backText: back,
+        extraTexts: extraTexts,
       ),
     );
   }
@@ -1730,6 +1779,41 @@ class _ManualFlashcardDialogState extends State<_ManualFlashcardDialog> {
                 labelText: 'Back',
                 hintText: 'Back content',
                 border: OutlineInputBorder(),
+              ),
+            ),
+            for (var index = 0; index < _extraControllers.length; index++) ...[
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _extraControllers[index],
+                      minLines: 2,
+                      maxLines: 5,
+                      textCapitalization: TextCapitalization.sentences,
+                      decoration: InputDecoration(
+                        labelText: 'Side ${index + 3}',
+                        hintText: 'Content for this side',
+                        border: const OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => _removeExtraSide(index),
+                    icon: const Icon(Icons.close, color: Colors.red),
+                    tooltip: 'Remove side',
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: _addExtraSide,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add side'),
               ),
             ),
             if (_error != null) ...[

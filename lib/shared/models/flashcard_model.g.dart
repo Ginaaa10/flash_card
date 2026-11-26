@@ -33,6 +33,10 @@ _$FlashcardModelImpl _$$FlashcardModelImplFromJson(Map<String, dynamic> json) =>
       groupName: json['groupName'] as String?,
       frontBackgroundImage: json['frontBackgroundImage'] as String?,
       backBackgroundImage: json['backBackgroundImage'] as String?,
+      extraFaces: (json['extraFaces'] as List<dynamic>?)
+              ?.map((e) => FlashcardFace.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
       borderStyle: json['borderStyle'] as String? ?? 'solid',
       borderColor: (json['borderColor'] as num?)?.toInt() ?? 0xFF6366F1,
       borderWidth: (json['borderWidth'] as num?)?.toDouble() ?? 2.0,
@@ -59,6 +63,7 @@ Map<String, dynamic> _$$FlashcardModelImplToJson(
       'groupName': instance.groupName,
       'frontBackgroundImage': instance.frontBackgroundImage,
       'backBackgroundImage': instance.backBackgroundImage,
+      'extraFaces': instance.extraFaces.map((e) => e.toJson()).toList(),
       'borderStyle': instance.borderStyle,
       'borderColor': instance.borderColor,
       'borderWidth': instance.borderWidth,

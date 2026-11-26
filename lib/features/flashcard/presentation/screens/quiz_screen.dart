@@ -22,7 +22,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   String _mode = 'flip';
   List<FlashcardModel> _cards = [];
   int _currentIndex = 0;
-  bool _showAnswer = false;
+  /// Which side is shown in flip mode: 0 = question (front), 1 = back,
+  /// 2+ = extra sides.
+  int _answerFaceIndex = 0;
   int? _selectedOption;
   bool _answered = false;
   int _correctCount = 0;
@@ -59,7 +61,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
       _quizStarted = true;
       _quizFinished = false;
       _currentIndex = 0;
-      _showAnswer = false;
+      _answerFaceIndex = 0;
       _selectedOption = null;
       _answered = false;
       _correctCount = 0;
@@ -74,7 +76,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     if (_currentIndex < _cards.length - 1) {
       setState(() {
         _currentIndex++;
-        _showAnswer = false;
+        _answerFaceIndex = 0;
         _selectedOption = null;
         _answered = false;
         _userStrokes.clear();
@@ -486,11 +488,16 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
   }
 
   Widget _buildFlipMode(ThemeData theme) {
+    final faceCount = _currentCard.faceCount;
     return GestureDetector(
-      onTap: () => setState(() => _showAnswer = !_showAnswer),
+      onTap: () => setState(() {
+        _answerFaceIndex = (_answerFaceIndex + 1) % faceCount;
+      }),
       child: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
-        child: _showAnswer ? _buildAnswerCard(theme) : _buildQuestionCard(theme),
+        child: _answerFaceIndex == 0
+            ? _buildQuestionCard(theme)
+            : _buildAnswerCard(theme, _answerFaceIndex),
       ),
     );
   }
@@ -586,9 +593,22 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     );
   }
 
-  Widget _buildAnswerCard(ThemeData theme) {
+  Widget _buildAnswerCard(ThemeData theme, int faceIndex) {
+    final extra =
+        faceIndex >= 2 ? _currentCard.extraFaces[faceIndex - 2] : null;
+    final strokes = extra?.strokes ?? _currentCard.backStrokes;
+    final text = extra?.text ?? _currentCard.backText;
+    final recognizedText =
+        extra?.recognizedText ?? _currentCard.backRecognizedText;
+    final title =
+        faceIndex == 1 ? 'Answer' : (extra?.name ?? 'Side ${faceIndex + 1}');
+    final faceCount = _currentCard.faceCount;
+    final hint = faceIndex >= faceCount - 1
+        ? 'Tap to go back to the front'
+        : 'Tap for the next side';
+
     return Container(
-      key: const ValueKey('answer'),
+      key: ValueKey('answer_$faceIndex'),
       height: 350,
       width: double.infinity,
       decoration: BoxDecoration(
@@ -616,13 +636,14 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 top: Radius.circular(20),
               ),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.lightbulb_outline, size: 18, color: Colors.white),
-                SizedBox(width: 8),
+                const Icon(Icons.lightbulb_outline,
+                    size: 18, color: Colors.white),
+                const SizedBox(width: 8),
                 Text(
-                  'Answer',
-                  style: TextStyle(
+                  title,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -631,7 +652,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
             ),
           ),
           Expanded(
-            child: _currentCard.backStrokes.isEmpty
+            child: strokes.isEmpty
                 ? Center(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -640,7 +661,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _currentCard.backText ?? _currentCard.backRecognizedText ?? 'Empty',
+                        text ?? recognizedText ?? 'Empty',
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
@@ -653,23 +674,29 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                 : Padding(
                     padding: const EdgeInsets.all(12),
                     child: CustomPaint(
-                      painter: QuizCardPainter(
-                          strokes: _currentCard.backStrokes),
+                      painter: QuizCardPainter(strokes: strokes),
                       size: Size.infinite,
                     ),
                   ),
           ),
-          if (_currentCard.backRecognizedText != null &&
-              _currentCard.backRecognizedText!.isNotEmpty)
+          if (recognizedText != null && recognizedText.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(8),
               child: Text(
-                _currentCard.backRecognizedText!,
+                recognizedText,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
                 ),
+              ),
+            ),
+          if (faceCount > 2)
+            Container(
+              padding: const EdgeInsets.all(12),
+              child: Text(
+                hint,
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
               ),
             ),
         ],

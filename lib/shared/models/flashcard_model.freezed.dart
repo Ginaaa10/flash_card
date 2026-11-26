@@ -37,6 +37,7 @@ mixin _$FlashcardModel {
   String? get groupName => throw _privateConstructorUsedError;
   String? get frontBackgroundImage => throw _privateConstructorUsedError;
   String? get backBackgroundImage => throw _privateConstructorUsedError;
+  List<FlashcardFace> get extraFaces => throw _privateConstructorUsedError;
   String get borderStyle => throw _privateConstructorUsedError;
   int get borderColor => throw _privateConstructorUsedError;
   double get borderWidth => throw _privateConstructorUsedError;
@@ -72,6 +73,7 @@ abstract class $FlashcardModelCopyWith<$Res> {
       String? groupName,
       String? frontBackgroundImage,
       String? backBackgroundImage,
+      List<FlashcardFace> extraFaces,
       String borderStyle,
       int borderColor,
       double borderWidth,
@@ -108,6 +110,7 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
     Object? groupName = freezed,
     Object? frontBackgroundImage = freezed,
     Object? backBackgroundImage = freezed,
+    Object? extraFaces = null,
     Object? borderStyle = null,
     Object? borderColor = null,
     Object? borderWidth = null,
@@ -182,6 +185,10 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
           ? _value.backBackgroundImage
           : backBackgroundImage // ignore: cast_nullable_to_non_nullable
               as String?,
+      extraFaces: null == extraFaces
+          ? _value.extraFaces
+          : extraFaces // ignore: cast_nullable_to_non_nullable
+              as List<FlashcardFace>,
       borderStyle: null == borderStyle
           ? _value.borderStyle
           : borderStyle // ignore: cast_nullable_to_non_nullable
@@ -228,6 +235,7 @@ abstract class _$$FlashcardModelImplCopyWith<$Res>
       String? groupName,
       String? frontBackgroundImage,
       String? backBackgroundImage,
+      List<FlashcardFace> extraFaces,
       String borderStyle,
       int borderColor,
       double borderWidth,
@@ -262,6 +270,7 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
     Object? groupName = freezed,
     Object? frontBackgroundImage = freezed,
     Object? backBackgroundImage = freezed,
+    Object? extraFaces = null,
     Object? borderStyle = null,
     Object? borderColor = null,
     Object? borderWidth = null,
@@ -336,6 +345,10 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
           ? _value.backBackgroundImage
           : backBackgroundImage // ignore: cast_nullable_to_non_nullable
               as String?,
+      extraFaces: null == extraFaces
+          ? _value._extraFaces
+          : extraFaces // ignore: cast_nullable_to_non_nullable
+              as List<FlashcardFace>,
       borderStyle: null == borderStyle
           ? _value.borderStyle
           : borderStyle // ignore: cast_nullable_to_non_nullable
@@ -358,7 +371,7 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
 
 /// @nodoc
 @JsonSerializable()
-class _$FlashcardModelImpl implements _FlashcardModel {
+class _$FlashcardModelImpl extends _FlashcardModel {
   const _$FlashcardModelImpl(
       {required this.id,
       required this.title,
@@ -377,13 +390,16 @@ class _$FlashcardModelImpl implements _FlashcardModel {
       this.groupName,
       this.frontBackgroundImage,
       this.backBackgroundImage,
+      final List<FlashcardFace> extraFaces = const [],
       this.borderStyle = 'solid',
       this.borderColor = 0xFF6366F1,
       this.borderWidth = 2.0,
       this.borderRadius = 16.0})
       : _frontStrokes = frontStrokes,
         _backStrokes = backStrokes,
-        _tags = tags;
+        _tags = tags,
+        _extraFaces = extraFaces,
+        super._();
 
   factory _$FlashcardModelImpl.fromJson(Map<String, dynamic> json) =>
       _$$FlashcardModelImplFromJson(json);
@@ -443,6 +459,15 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   final String? frontBackgroundImage;
   @override
   final String? backBackgroundImage;
+  final List<FlashcardFace> _extraFaces;
+  @override
+  @JsonKey()
+  List<FlashcardFace> get extraFaces {
+    if (_extraFaces is EqualUnmodifiableListView) return _extraFaces;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_extraFaces);
+  }
+
   @override
   @JsonKey()
   final String borderStyle;
@@ -458,7 +483,7 @@ class _$FlashcardModelImpl implements _FlashcardModel {
 
   @override
   String toString() {
-    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontText: $frontText, backText: $backText, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
+    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontText: $frontText, backText: $backText, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, extraFaces: $extraFaces, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
   }
 
   @override
@@ -497,6 +522,8 @@ class _$FlashcardModelImpl implements _FlashcardModel {
                 other.frontBackgroundImage == frontBackgroundImage) &&
             (identical(other.backBackgroundImage, backBackgroundImage) ||
                 other.backBackgroundImage == backBackgroundImage) &&
+            const DeepCollectionEquality()
+                .equals(other._extraFaces, _extraFaces) &&
             (identical(other.borderStyle, borderStyle) ||
                 other.borderStyle == borderStyle) &&
             (identical(other.borderColor, borderColor) ||
@@ -528,6 +555,7 @@ class _$FlashcardModelImpl implements _FlashcardModel {
         groupName,
         frontBackgroundImage,
         backBackgroundImage,
+        const DeepCollectionEquality().hash(_extraFaces),
         borderStyle,
         borderColor,
         borderWidth,
@@ -549,7 +577,7 @@ class _$FlashcardModelImpl implements _FlashcardModel {
   }
 }
 
-abstract class _FlashcardModel implements FlashcardModel {
+abstract class _FlashcardModel extends FlashcardModel {
   const factory _FlashcardModel(
       {required final String id,
       required final String title,
@@ -568,10 +596,12 @@ abstract class _FlashcardModel implements FlashcardModel {
       final String? groupName,
       final String? frontBackgroundImage,
       final String? backBackgroundImage,
+      final List<FlashcardFace> extraFaces,
       final String borderStyle,
       final int borderColor,
       final double borderWidth,
       final double borderRadius}) = _$FlashcardModelImpl;
+  const _FlashcardModel._() : super._();
 
   factory _FlashcardModel.fromJson(Map<String, dynamic> json) =
       _$FlashcardModelImpl.fromJson;
@@ -610,6 +640,8 @@ abstract class _FlashcardModel implements FlashcardModel {
   String? get frontBackgroundImage;
   @override
   String? get backBackgroundImage;
+  @override
+  List<FlashcardFace> get extraFaces;
   @override
   String get borderStyle;
   @override
