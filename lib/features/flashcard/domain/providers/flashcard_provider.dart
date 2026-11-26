@@ -60,6 +60,8 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
     required String title,
     List<StrokeModel>? frontStrokes,
     List<StrokeModel>? backStrokes,
+    String frontName = 'Front',
+    String backName = 'Back',
     String? frontText,
     String? backText,
     String? frontBackgroundImage,
@@ -76,6 +78,8 @@ class FlashcardNotifier extends StateNotifier<List<FlashcardModel>> {
       title: title,
       frontStrokes: frontStrokes ?? [],
       backStrokes: backStrokes ?? [],
+      frontName: frontName,
+      backName: backName,
       frontText: frontText,
       backText: backText,
       createdAt: now,
@@ -219,6 +223,14 @@ bool matchesQuery(FlashcardModel flashcard, String lowerQuery) {
       value != null && value.toLowerCase().contains(lowerQuery);
 
   if (flashcard.title.toLowerCase().contains(lowerQuery)) return true;
+  // Only match custom side names: the defaults "Front"/"Back" would otherwise
+  // make every card match those queries.
+  if (flashcard.frontName != 'Front' && hasText(flashcard.frontName)) {
+    return true;
+  }
+  if (flashcard.backName != 'Back' && hasText(flashcard.backName)) {
+    return true;
+  }
   if (hasText(flashcard.frontText) ||
       hasText(flashcard.backText) ||
       hasText(flashcard.frontRecognizedText) ||

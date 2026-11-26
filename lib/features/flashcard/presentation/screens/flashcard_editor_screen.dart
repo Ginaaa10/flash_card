@@ -68,6 +68,12 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     );
   }
 
+  /// Falls back to [fallback] when a stored name is missing or blank.
+  static String _displayName(String? value, String fallback) {
+    final name = value?.trim() ?? '';
+    return name.isEmpty ? fallback : name;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +102,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     _faces = [
       _newFace(
         'front',
-        'Front',
+        _displayName(flashcard.frontName, 'Front'),
         initialStrokes: flashcard.frontStrokes,
         text: flashcard.frontText,
         recognizedText: flashcard.frontRecognizedText,
@@ -104,7 +110,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
       ),
       _newFace(
         'back',
-        'Back',
+        _displayName(flashcard.backName, 'Back'),
         initialStrokes: flashcard.backStrokes,
         text: flashcard.backText,
         recognizedText: flashcard.backRecognizedText,
@@ -653,6 +659,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
                 _activeFaceIndex = index;
                 _isTextInputMode = false;
               }),
+              onRename: () => _renameFace(index),
               onRemove: index >= 2 ? () => _removeFace(index) : null,
             ),
             const SizedBox(width: 10),
@@ -706,6 +713,87 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     });
   }
 
+  Future<void> _renameFace(int index) async {
+    final face = _faces[index];
+    final controller = TextEditingController(text: face.name);
+    controller.selection = TextSelection(
+      baseOffset: 0,
+      extentOffset: controller.text.length,
+    );
+    String? error;
+
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) {
+          void submit() {
+            final value = controller.text.trim().replaceAll(
+                  RegExp(r'\s+'),
+                  ' ',
+                );
+            if (value.isEmpty) {
+              setDialogState(() => error = 'Enter a name for this side');
+              return;
+            }
+            Navigator.pop(dialogContext, value);
+          }
+
+          return AlertDialog(
+            title: const Text('Rename side'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  maxLength: 24,
+                  textCapitalization: TextCapitalization.sentences,
+                  onSubmitted: (_) => submit(),
+                  decoration: InputDecoration(
+                    labelText: 'Side name',
+                    hintText: 'e.g. Question, Answer, Example',
+                    border: const OutlineInputBorder(),
+                    errorText: error,
+                  ),
+                ),
+                if (index < 2)
+                  Text(
+                    'Renaming Front or Back does not change what the card '
+                    'asks or answers — it only changes the label.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: submit,
+                child: const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (newName == null || !mounted) {
+      controller.dispose();
+      return;
+    }
+
+    setState(() {
+      face.name = newName;
+    });
+    controller.dispose();
+  }
+
   Future<void> _removeFace(int index) async {
     if (index < 2) return;
     final face = _faces[index];
@@ -756,8 +844,10 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
     required bool isActive,
     required ThemeData theme,
     required VoidCallback onTap,
+    VoidCallback? onRename,
     VoidCallback? onRemove,
   }) {
+    final showRename = isActive && onRename != null;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(20),
@@ -766,7 +856,7 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
         curve: Curves.easeOutCubic,
         padding: EdgeInsets.only(
           left: 18,
-          right: onRemove != null ? 10 : 18,
+          right: (onRemove != null || showRename) ? 10 : 18,
           top: 12,
           bottom: 12,
         ),
@@ -814,14 +904,37 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               color: isActive ? Colors.white : Colors.grey.shade400,
             ),
             const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? Colors.white : Colors.grey.shade600,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 160),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: isActive ? Colors.white : Colors.grey.shade600,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
               ),
             ),
+            if (showRename) ...[
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'Rename side',
+                child: GestureDetector(
+                  onTap: onRename,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.edit_outlined,
+                      size: 14,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ),
+              ),
+            ],
             if (onRemove != null) ...[
               const SizedBox(width: 6),
               GestureDetector(
@@ -1515,6 +1628,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
               title: title,
               frontStrokes: frontStrokes,
               backStrokes: backStrokes,
+              frontName: front.name,
+              backName: back.name,
               frontText: _faceText(front),
               backText: _faceText(back),
               frontRecognizedText: front.recognizedText,
@@ -1537,6 +1652,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
             title: title,
             frontStrokes: frontStrokes,
             backStrokes: backStrokes,
+            frontName: front.name,
+            backName: back.name,
             frontText: _faceText(front),
             backText: _faceText(back),
             frontBackgroundImage: front.backgroundImage,
@@ -1553,6 +1670,8 @@ class _FlashcardEditorScreenState extends ConsumerState<FlashcardEditorScreen> {
           title: title,
           frontStrokes: frontStrokes,
           backStrokes: backStrokes,
+          frontName: front.name,
+          backName: back.name,
           frontText: _faceText(front),
           backText: _faceText(back),
           frontBackgroundImage: front.backgroundImage,
@@ -1598,7 +1717,9 @@ class _FaceState {
         textController = TextEditingController(text: text ?? '');
 
   final String id;
-  final String name;
+
+  /// Display name of the side; can be renamed by the user.
+  String name;
 
   /// Strokes the side starts with; only used the first time it is built.
   final List<StrokeModel> initialStrokes;

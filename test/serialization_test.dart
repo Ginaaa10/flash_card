@@ -144,5 +144,34 @@ void main() {
     expect(restored.extraFaces, isEmpty);
     expect(restored.faceCount, 2);
     expect(restored.frontText, 'hello');
+    expect(restored.frontName, 'Front');
+    expect(restored.backName, 'Back');
+  });
+
+  test('custom side names round-trip and legacy cards keep the defaults', () {
+    final card = FlashcardModel(
+      id: 'named-id',
+      title: 'Named card',
+      frontStrokes: const [],
+      backStrokes: const [],
+      frontName: 'Mặt trước',
+      backName: 'Đáp án',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      extraFaces: const [
+        FlashcardFace(id: 'side-3', name: 'Ví dụ'),
+      ],
+    );
+
+    final json = card.toJson();
+    expect(json['frontName'], 'Mặt trước');
+    expect(json['backName'], 'Đáp án');
+
+    final restored = FlashcardModel.fromJson(
+      jsonDecode(jsonEncode(json)) as Map<String, dynamic>,
+    );
+    expect(restored.frontName, 'Mặt trước');
+    expect(restored.backName, 'Đáp án');
+    expect(restored.extraFaces.first.name, 'Ví dụ');
   });
 }

@@ -24,6 +24,8 @@ mixin _$FlashcardModel {
   String get title => throw _privateConstructorUsedError;
   List<StrokeModel> get frontStrokes => throw _privateConstructorUsedError;
   List<StrokeModel> get backStrokes => throw _privateConstructorUsedError;
+  String get frontName => throw _privateConstructorUsedError;
+  String get backName => throw _privateConstructorUsedError;
   String? get frontText => throw _privateConstructorUsedError;
   String? get backText => throw _privateConstructorUsedError;
   String? get frontRecognizedText => throw _privateConstructorUsedError;
@@ -60,6 +62,8 @@ abstract class $FlashcardModelCopyWith<$Res> {
       String title,
       List<StrokeModel> frontStrokes,
       List<StrokeModel> backStrokes,
+      String frontName,
+      String backName,
       String? frontText,
       String? backText,
       String? frontRecognizedText,
@@ -97,6 +101,8 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
     Object? title = null,
     Object? frontStrokes = null,
     Object? backStrokes = null,
+    Object? frontName = null,
+    Object? backName = null,
     Object? frontText = freezed,
     Object? backText = freezed,
     Object? frontRecognizedText = freezed,
@@ -133,6 +139,14 @@ class _$FlashcardModelCopyWithImpl<$Res, $Val extends FlashcardModel>
           ? _value.backStrokes
           : backStrokes // ignore: cast_nullable_to_non_nullable
               as List<StrokeModel>,
+      frontName: null == frontName
+          ? _value.frontName
+          : frontName // ignore: cast_nullable_to_non_nullable
+              as String,
+      backName: null == backName
+          ? _value.backName
+          : backName // ignore: cast_nullable_to_non_nullable
+              as String,
       frontText: freezed == frontText
           ? _value.frontText
           : frontText // ignore: cast_nullable_to_non_nullable
@@ -222,6 +236,8 @@ abstract class _$$FlashcardModelImplCopyWith<$Res>
       String title,
       List<StrokeModel> frontStrokes,
       List<StrokeModel> backStrokes,
+      String frontName,
+      String backName,
       String? frontText,
       String? backText,
       String? frontRecognizedText,
@@ -257,6 +273,8 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
     Object? title = null,
     Object? frontStrokes = null,
     Object? backStrokes = null,
+    Object? frontName = null,
+    Object? backName = null,
     Object? frontText = freezed,
     Object? backText = freezed,
     Object? frontRecognizedText = freezed,
@@ -293,6 +311,14 @@ class __$$FlashcardModelImplCopyWithImpl<$Res>
           ? _value._backStrokes
           : backStrokes // ignore: cast_nullable_to_non_nullable
               as List<StrokeModel>,
+      frontName: null == frontName
+          ? _value.frontName
+          : frontName // ignore: cast_nullable_to_non_nullable
+              as String,
+      backName: null == backName
+          ? _value.backName
+          : backName // ignore: cast_nullable_to_non_nullable
+              as String,
       frontText: freezed == frontText
           ? _value.frontText
           : frontText // ignore: cast_nullable_to_non_nullable
@@ -377,6 +403,8 @@ class _$FlashcardModelImpl extends _FlashcardModel {
       required this.title,
       required final List<StrokeModel> frontStrokes,
       required final List<StrokeModel> backStrokes,
+      this.frontName = 'Front',
+      this.backName = 'Back',
       this.frontText,
       this.backText,
       this.frontRecognizedText,
@@ -424,6 +452,12 @@ class _$FlashcardModelImpl extends _FlashcardModel {
     return EqualUnmodifiableListView(_backStrokes);
   }
 
+  @override
+  @JsonKey()
+  final String frontName;
+  @override
+  @JsonKey()
+  final String backName;
   @override
   final String? frontText;
   @override
@@ -483,7 +517,7 @@ class _$FlashcardModelImpl extends _FlashcardModel {
 
   @override
   String toString() {
-    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontText: $frontText, backText: $backText, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, extraFaces: $extraFaces, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
+    return 'FlashcardModel(id: $id, title: $title, frontStrokes: $frontStrokes, backStrokes: $backStrokes, frontName: $frontName, backName: $backName, frontText: $frontText, backText: $backText, frontRecognizedText: $frontRecognizedText, backRecognizedText: $backRecognizedText, createdAt: $createdAt, updatedAt: $updatedAt, tags: $tags, reviewCount: $reviewCount, lastReviewedAt: $lastReviewedAt, isFavorite: $isFavorite, groupName: $groupName, frontBackgroundImage: $frontBackgroundImage, backBackgroundImage: $backBackgroundImage, extraFaces: $extraFaces, borderStyle: $borderStyle, borderColor: $borderColor, borderWidth: $borderWidth, borderRadius: $borderRadius)';
   }
 
   @override
@@ -497,6 +531,10 @@ class _$FlashcardModelImpl extends _FlashcardModel {
                 .equals(other._frontStrokes, _frontStrokes) &&
             const DeepCollectionEquality()
                 .equals(other._backStrokes, _backStrokes) &&
+            (identical(other.frontName, frontName) ||
+                other.frontName == frontName) &&
+            (identical(other.backName, backName) ||
+                other.backName == backName) &&
             (identical(other.frontText, frontText) ||
                 other.frontText == frontText) &&
             (identical(other.backText, backText) ||
@@ -542,6 +580,8 @@ class _$FlashcardModelImpl extends _FlashcardModel {
         title,
         const DeepCollectionEquality().hash(_frontStrokes),
         const DeepCollectionEquality().hash(_backStrokes),
+        frontName,
+        backName,
         frontText,
         backText,
         frontRecognizedText,
@@ -583,6 +623,8 @@ abstract class _FlashcardModel extends FlashcardModel {
       required final String title,
       required final List<StrokeModel> frontStrokes,
       required final List<StrokeModel> backStrokes,
+      final String frontName,
+      final String backName,
       final String? frontText,
       final String? backText,
       final String? frontRecognizedText,
@@ -614,6 +656,10 @@ abstract class _FlashcardModel extends FlashcardModel {
   List<StrokeModel> get frontStrokes;
   @override
   List<StrokeModel> get backStrokes;
+  @override
+  String get frontName;
+  @override
+  String get backName;
   @override
   String? get frontText;
   @override

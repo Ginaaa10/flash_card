@@ -9,6 +9,14 @@ import 'package:flash_card_app/shared/models/stroke_model.dart';
 import 'package:flash_card_app/shared/models/point_model.dart';
 import 'package:flash_card_app/shared/services/ai_service.dart';
 
+/// Shows a user-defined side name, or [fallback] while the side still uses
+/// its [defaultName] (or has no name at all).
+String _customSideLabel(String? name, String defaultName, String fallback) {
+  final value = name?.trim() ?? '';
+  if (value.isEmpty || value == defaultName) return fallback;
+  return value;
+}
+
 class QuizScreen extends ConsumerStatefulWidget {
   final String? groupId;
 
@@ -534,7 +542,7 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
                     size: 18, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
-                  'Question',
+                  _customSideLabel(_currentCard.frontName, 'Front', 'Question'),
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: theme.colorScheme.primary,
@@ -600,8 +608,9 @@ class _QuizScreenState extends ConsumerState<QuizScreen> {
     final text = extra?.text ?? _currentCard.backText;
     final recognizedText =
         extra?.recognizedText ?? _currentCard.backRecognizedText;
-    final title =
-        faceIndex == 1 ? 'Answer' : (extra?.name ?? 'Side ${faceIndex + 1}');
+    final title = faceIndex == 1
+        ? _customSideLabel(_currentCard.backName, 'Back', 'Answer')
+        : (extra?.name ?? 'Side ${faceIndex + 1}');
     final faceCount = _currentCard.faceCount;
     final hint = faceIndex >= faceCount - 1
         ? 'Tap to go back to the front'

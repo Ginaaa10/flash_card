@@ -14,6 +14,8 @@ class FlashcardModel with _$FlashcardModel {
     required String title,
     required List<StrokeModel> frontStrokes,
     required List<StrokeModel> backStrokes,
+    @Default('Front') String frontName,
+    @Default('Back') String backName,
     String? frontText,
     String? backText,
     String? frontRecognizedText,
